@@ -67,8 +67,7 @@ class WeiboSpider(scrapy.Spider):
 
         weibo_item['user_url'] = response.url
 
-        # for i in range(len(wbs) - 2):
-        for i in range(0, 2):
+        for i in range(len(wbs) - 2):
             comment_href = ''
             divs = wbs[i].xpath('./div')
             weibo_item['observer'] = []
