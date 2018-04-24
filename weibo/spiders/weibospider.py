@@ -76,7 +76,7 @@ class WeiboSpider(scrapy.Spider):
             if len(divs) == 1:
                 date = divs[0].xpath('./span[@class="ct"]/text()').extract()[0]
                 if not isCorrectTime(date):
-                    return
+                    continue
                 weibo_item['date'] = date
                 a = divs[0].xpath('./a')
                 if len(a) > 0:
@@ -87,7 +87,7 @@ class WeiboSpider(scrapy.Spider):
             if len(divs) == 2:
                 date = divs[1].xpath('./span[@class="ct"]/text()').extract()[0]
                 if not isCorrectTime(date):
-                    return
+                    continue
                 weibo_item['date'] = date
                 a = divs[1].xpath('./a')
                 if len(a) > 0:
