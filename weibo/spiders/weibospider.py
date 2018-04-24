@@ -25,8 +25,8 @@ class WeiboSpider(scrapy.Spider):
                 method="POST",
                 formdata={
                     # **********input your login info***********
-                    "username": "",
-                    "password": "",
+                    "username": "weibopachong@sina.com",
+                    "password": "weiboceshi",
                     # ******************************************
                     "savestate": "1",
                     "r": "http://m.weibo.cn",
