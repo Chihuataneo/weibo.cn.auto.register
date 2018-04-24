@@ -124,7 +124,7 @@ class WeiboSpider(scrapy.Spider):
 
             user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
             observer_item['user_url'] = user_url
-            yield Request(user_url, meta={'url': user_url}, callback=self.parse_user)
+            yield Request(user_url, meta={'url': user_url, 'weibo': weibo_content}, callback=self.parse_user)
             comment_list.append(dict(observer_item))
         weibo_item['observer'].extend(comment_list)
 
