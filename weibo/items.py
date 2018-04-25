@@ -15,13 +15,14 @@ class WeiboItem(scrapy.Item):
     transpond_number = scrapy.Field()
     comment_number = scrapy.Field()
     date = scrapy.Field()
-    observer = scrapy.Field()
+    # observer = scrapy.Field()
 
 
 class CommentItem(scrapy.Item):
     user = scrapy.Field()
     user_url = scrapy.Field()
     content = scrapy.Field()
+    weibo_content = scrapy.Field()
 
 
 class FanItem(scrapy.Item):

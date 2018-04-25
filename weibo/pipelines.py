@@ -20,8 +20,12 @@ class WeiboPipeline(object):
             self.f = open('result/weibo_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
-        if isinstance(item, FanItem):
+        elif isinstance(item, FanItem):
             self.f = open('result/fans_result.txt', 'a+', encoding='utf-8')
+            line = json.dumps(dict(item), ensure_ascii=False) + '\n'
+            self.f.write(line)
+        elif isinstance(item, CommentItem):
+            self.f = open('result/comment_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         return item

@@ -21,7 +21,7 @@ CORRECT_NEWS = 2
 
 def isCorrectTime(time_para):
     try:
-        if u'今天' in time_para:
+        if u'今天' in time_para or u'分钟前' in time_para:
             date = int(time.strftime('%Y%m%d %H:%M:%S', time.localtime(time.time()))[:-9])
             if date < TIME_FILTER_START:
                 return TOO_LATE_NEWS

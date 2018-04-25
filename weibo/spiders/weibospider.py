@@ -7,7 +7,7 @@ class WeiboSpider(scrapy.Spider):
 
     def __init__(self):
         self.sso_login_url = 'https://passport.weibo.cn/sso/login'
-        self.weibo_url_list = ['https://weibo.cn/tinagao7828']
+        self.weibo_url_list = ['https://weibo.cn/BVBorussiaDortmund09?f=search_0']
         self.header = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.8',
@@ -68,16 +68,17 @@ class WeiboSpider(scrapy.Spider):
         weibo_item['user_url'] = response.url
 
         for i in range(len(wbs) - 2):
+            wb_text = wbs[i].extract()
             comment_href = ''
             divs = wbs[i].xpath('./div')
-            weibo_item['observer'] = []
+            # weibo_item['observer'] = []
             weibo_item['content'] = re.findall('<span class="ctt">(.+)</span>', divs[0].xpath('./span[@class="ctt"]').extract()[0])[0]
 
             if len(divs) == 1:
                 date = divs[0].xpath('./span[@class="ct"]/text()').extract()[0]
                 if isCorrectTime(date) == TOO_FORWARD_NEWS:
                     continue
-                elif isCorrectTime(date) == TOO_LATE_NEWS:
+                elif (isCorrectTime(date) == TOO_LATE_NEWS) and (u'置顶' not in wb_text):
                     return
                 weibo_item['date'] = date
                 a = divs[0].xpath('./a')
@@ -90,7 +91,7 @@ class WeiboSpider(scrapy.Spider):
                 date = divs[1].xpath('./span[@class="ct"]/text()').extract()[0]
                 if isCorrectTime(date) == TOO_FORWARD_NEWS:
                     continue
-                elif isCorrectTime(date) == TOO_LATE_NEWS:
+                elif (isCorrectTime(date) == TOO_LATE_NEWS) and (u'置顶' not in wb_text):
                     return
                 weibo_item['date'] = date
                 a = divs[1].xpath('./a')
@@ -99,7 +100,9 @@ class WeiboSpider(scrapy.Spider):
                     weibo_item['transpond_number'] = a[-3].xpath('./text()').extract()[0]
                     weibo_item['comment_number'] = a[-2].xpath('./text()').extract()[0]
                     comment_href = a[-2].xpath('./@href').extract()[0]
-            yield Request(comment_href, meta={'item': weibo_item, 'weibo': weibo_item['content']}, callback=self.parse_comment)
+            # yield Request(comment_href, meta={'item': weibo_item, 'weibo': weibo_item['content']}, callback=self.parse_comment)
+            yield weibo_item
+            yield Request(comment_href, meta={'weibo': weibo_item['content']}, callback=self.parse_comment)
 
         if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
             next_href = selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
@@ -108,9 +111,10 @@ class WeiboSpider(scrapy.Spider):
     def parse_comment(self, response):
         observer_item = CommentItem()
         selector = Selector(response)
-        weibo_item = response.meta['item']
+        # weibo_item = response.meta['item']
         weibo_content = response.meta['weibo']
-        comment_list = []
+        observer_item['weibo_content'] = weibo_content
+        # comment_list = []
 
         comment_records = selector.xpath('//div[@class="c"]')
         for comment_record in comment_records[3:-1]:
@@ -124,15 +128,17 @@ class WeiboSpider(scrapy.Spider):
 
             user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
             observer_item['user_url'] = user_url
+            yield observer_item
             yield Request(user_url, meta={'url': user_url, 'weibo': weibo_content}, callback=self.parse_user)
-            comment_list.append(dict(observer_item))
-        weibo_item['observer'].extend(comment_list)
+            # comment_list.append(dict(observer_item))
+        # weibo_item['observer'].extend(comment_list)
 
         if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
             next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
-            yield Request(next_href, meta={'item': weibo_item, 'weibo': weibo_content}, callback=self.parse_comment)
-        else:
-            yield weibo_item
+            # yield Request(next_href, meta={'item': weibo_item, 'weibo': weibo_content}, callback=self.parse_comment)
+            yield Request(next_href, meta={'weibo': weibo_content}, callback=self.parse_comment)
+        # else:
+        #     yield weibo_item
 
     def parse_user(self, response):
         user_item = FanItem()
