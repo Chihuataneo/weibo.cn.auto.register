@@ -7,7 +7,7 @@ class WeiboSpider(scrapy.Spider):
 
     def __init__(self):
         self.sso_login_url = 'https://passport.weibo.cn/sso/login'
-        self.weibo_url_list = ['https://weibo.cn/BVBorussiaDortmund09?f=search_0']
+        self.weibo_url_list = ['https://weibo.cn/u/2794430491?f=search_0']
         self.header = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.8',
