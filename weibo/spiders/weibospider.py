@@ -87,8 +87,8 @@ class WeiboSpider(scrapy.Spider):
                     weibo_item['transpond_number'] = a[-3].xpath('./text()').extract()[0]
                     weibo_item['comment_number'] = a[-2].xpath('./text()').extract()[0]
                     comment_href = a[-2].xpath('./@href').extract()[0]
-            if len(divs) == 2:
-                date = divs[1].xpath('./span[@class="ct"]/text()').extract()[0]
+            if len(divs) > 1:
+                date = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
                 if isCorrectTime(date) == TOO_FORWARD_NEWS:
                     continue
                 elif (isCorrectTime(date) == TOO_LATE_NEWS) and (u'置顶' not in wb_text):
