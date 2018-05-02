@@ -6,6 +6,8 @@
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
 from weibo.common import *
+from selenium import webdriver
+from scrapy.http import HtmlResponse
 
 
 class WeiboSpiderMiddleware(object):
@@ -109,3 +111,50 @@ class ProxyMiddleware(object):
         proxy_user_pass = "H65M0VWE594O57LD:C866058A953A5629"
         encoded_user_pass = base64.b64encode(proxy_user_pass.encode(encoding='utf-8'))
         request.headers['Proxy-Authorization'] = 'Basic ' + encoded_user_pass.decode()
+
+
+js = """
+function scrollToBottom() {
+
+    var Height = document.body.clientHeight,
+        screenHeight = window.innerHeight,
+        INTERVAL = 1000,
+        delta = 500,
+        curScrollTop = 0;
+
+    var scroll = function () {
+        curScrollTop = document.body.scrollTop;
+        window.scrollTo(0,curScrollTop + delta);
+    };
+
+    var timer = setInterval(function () {
+        var curHeight = curScrollTop + screenHeight;
+        if (curHeight >= Height){
+            clearInterval(timer);
+        }
+        scroll();
+    }, INTERVAL)
+}
+scrollToBottom()
+"""
+class PhantomJSMiddleware(object):
+    @classmethod
+    def process_request(cls, request, spider):
+        if 'PhantomJS' in request.meta:
+            # driver = webdriver.PhantomJS()
+            # driver.get(request.url)
+            # driver.execute_script(js)
+            # time.sleep(3)
+            # content = driver.page_source.encode('utf-8')
+            # driver.quit()
+
+            # /*******************headless chrome*******************/
+            opt = webdriver.ChromeOptions()
+            opt.set_headless()
+            driver = webdriver.Chrome(options=opt)
+            driver.get(request.url)
+            driver.execute_script(js)
+            time.sleep(3)
+            content = driver.page_source.encode('utf-8')
+            driver.quit()
+            return HtmlResponse(request.url, encoding='utf-8', body=content, request=request)
