@@ -64,7 +64,7 @@ class TopicSpider(scrapy.Spider):
         for topic_url in self.topic_url_list:
             yield scrapy.Request(
                 topic_url,
-                meta={'PhantomJS': True},
+                meta={'chrome': True},
                 headers=self.header,
                 callback=self.parse_topic
             )
