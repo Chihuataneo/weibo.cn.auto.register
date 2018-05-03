@@ -19,6 +19,8 @@ TOO_LATE_NEWS = 0
 TOO_FORWARD_NEWS = 1
 CORRECT_NEWS = 2
 
+INFO_LEN = 3
+
 def isCorrectTime(time_para):
     try:
         if u'今天' in time_para or u'分钟前' in time_para:

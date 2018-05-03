@@ -32,3 +32,25 @@ class WeiboPipeline(object):
 
     def close_spider(self, spider):
         self.f.close()
+
+
+class TopicPipeline(object):
+    # def __init__(self):
+    #     if sys.version > '3':
+    #         self.f = open('weibo_result.txt', 'a+', encoding='utf-8')
+    #     else:
+    #         self.f = open('weibo_result.txt', 'a+')
+
+    def process_item(self, item, spider):
+        if isinstance(item, TopicItem):
+            self.f = open('result/topic_info.txt', 'w', encoding='utf-8')
+            line = json.dumps(dict(item), ensure_ascii=False) + '\n'
+            self.f.write(line)
+        elif isinstance(item, WeiboItem):
+            self.f = open('result/topic_weibo_result.txt', 'a+', encoding='utf-8')
+            line = json.dumps(dict(item), ensure_ascii=False) + '\n'
+            self.f.write(line)
+        return item
+
+    def close_spider(self, spider):
+        self.f.close()

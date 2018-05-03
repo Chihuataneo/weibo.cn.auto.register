@@ -137,7 +137,7 @@ function scrollToBottom() {
 }
 scrollToBottom()
 """
-class PhantomJSMiddleware(object):
+class ChromeMiddleware(object):
     @classmethod
     def process_request(cls, request, spider):
         if 'chrome' in request.meta:
@@ -151,14 +151,14 @@ class PhantomJSMiddleware(object):
             # /*******************headless chrome*******************/
             opt = webdriver.ChromeOptions()
             opt.set_headless()
+            opt.add_argument('lang=zh_CN.UTF-8')
+            opt.add_argument('user-agent="Mozilla/5.0 (iPod; U; CPU iPhone OS 2_1 like Mac OS X; ja-jp) AppleWebKit/525.18.1 (KHTML, like Gecko) Version/3.1.1 Mobile/5F137 Safari/525.20"')
             chromedriver = "C:\Program Files (x86)\Google\Chrome\Application\chromedriver.exe"
             driver = webdriver.Chrome(executable_path=chromedriver, options=opt)
             driver.get(request.url)
             time.sleep(3)
-            # driver.execute_script(js)
-            # time.sleep(3)
+            driver.execute_script(js)
+            time.sleep(3)
             content = driver.page_source
-            print('\n')
-            print(content)
             driver.quit()
             return HtmlResponse(request.url, encoding='utf-8', body=content, request=request)

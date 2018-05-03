@@ -52,10 +52,10 @@ DOWNLOAD_DELAY = 3
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
-DOWNLOADER_MIDDLEWARES = {
+# DOWNLOADER_MIDDLEWARES = {
    # 'weibo.middlewares.ProxyMiddleware': 90,
-   'weibo.middlewares.PhantomJSMiddleware': 100,
-}
+   # 'weibo.middlewares.ChromeMiddleware': 100,
+# }
 
 # Enable or disable extensions
 # See https://doc.scrapy.org/en/latest/topics/extensions.html
@@ -67,6 +67,7 @@ DOWNLOADER_MIDDLEWARES = {
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
    'weibo.pipelines.WeiboPipeline': 300,
+   'weibo.pipelines.TopicPipeline': 400,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

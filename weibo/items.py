@@ -33,3 +33,9 @@ class FanItem(scrapy.Item):
     sex = scrapy.Field()
     location = scrapy.Field()
     weibo_content = scrapy.Field()
+
+
+class TopicItem(scrapy.Item):
+    read_times = scrapy.Field()
+    discuss_times = scrapy.Field()
+    fans_number = scrapy.Field()
