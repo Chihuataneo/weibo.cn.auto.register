@@ -1,9 +1,0 @@
-<div class="WB_cardwrap S_bg2" node-type="lazyload" action-data="tab=home&amp;current_page=1&amp;since_id=%7B%22last_since_id%22%3A4222647527502833%2C%22res_type%22%3A1%2C%22next_since_id%22%3A4205899214151927%7D">
-                <div class="WB_empty WB_empty_narrow">
-                    <div class="WB_innerwrap">
-                        <div class="empty_con clearfix">
-                            <p class="text"><i class="W_loading"></i>正在加载中，请稍候...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
