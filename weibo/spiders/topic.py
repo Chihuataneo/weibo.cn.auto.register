@@ -6,7 +6,7 @@ class TopicSpider(scrapy.Spider):
     page_bar = 0
     current_page = 1
     name = 'topic'
-    write_switch = False
+    write_switch = True
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.TopicPipeline': 400}}
 
     def __init__(self):
