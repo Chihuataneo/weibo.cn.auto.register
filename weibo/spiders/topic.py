@@ -128,12 +128,15 @@ class TopicSpider(scrapy.Spider):
                 next_page_text = selector.css('div.WB_cardwrap.S_bg2').extract()[-1]
 
                 if next_page.css('div.W_pages'):
-                    next_page_href = 'https://weibo.com' + next_page.css('div.W_pages')[0].css('a.page.next.S_txt1.S_line1')[0].xpath('./@href')[0].extract()
-                    yield scrapy.Request(
-                        next_page_href,
-                        headers=self.header,
-                        callback=self.parse_topic
-                    )
+                    try:
+                        next_page_href = 'https://weibo.com' + next_page.css('div.W_pages')[0].css('a.page.next.S_txt1.S_line1')[0].xpath('./@href')[0].extract()
+                        yield scrapy.Request(
+                            next_page_href,
+                            headers=self.header,
+                            callback=self.parse_topic
+                        )
+                    except:
+                        return
                 else:
                     if 'last_since_id' in next_page_text and 'next_since_id' in next_page_text:
                         last_since_id = re.findall('last_since_id(.{22})', next_page_text)[0][-16:]
@@ -174,12 +177,15 @@ class TopicSpider(scrapy.Spider):
         next_page_text = selector.css('div.WB_cardwrap.S_bg2').extract()[-1]
 
         if next_page.css('div.W_pages'):
-            next_page_href = 'https://weibo.com' + next_page.css('div.W_pages')[0].css('a.page.next.S_txt1.S_line1')[0].xpath('./@href')[0].extract()
-            yield scrapy.Request(
-                next_page_href,
-                headers=self.header,
-                callback=self.parse_topic
-            )
+            try:
+                next_page_href = 'https://weibo.com' + next_page.css('div.W_pages')[0].css('a.page.next.S_txt1.S_line1')[0].xpath('./@href')[0].extract()
+                yield scrapy.Request(
+                    next_page_href,
+                    headers=self.header,
+                    callback=self.parse_topic
+                )
+            except:
+                return
         else:
             if 'last_since_id' in next_page_text and 'next_since_id' in next_page_text:
                 last_since_id = re.findall('last_since_id(.{22})', next_page_text)[0][-16:]
