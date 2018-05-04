@@ -3,23 +3,30 @@ from weibo.common import *
 from weibo.items import TopicItem, WeiboItem
 
 class TopicSpider(scrapy.Spider):
+    page = 1
     page_bar = 0
     current_page = 1
     name = 'topic'
-    write_switch = True
+
+    write_switch = False
+    print_switch = False
+
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.TopicPipeline': 400}}
 
     def __init__(self):
         self.sso_login_url = 'https://passport.weibo.cn/sso/login'
-        self.topic_url_list_by_reply_time = ['https://weibo.com/p/1008082bb04e0912c994bdf91da2da21b0b411?feed_sort=timeline&feed_filter=timeline#Pl_Third_App__11']
-        self.topic_url_list_by_release_time = ['https://weibo.com/p/1008082bb04e0912c994bdf91da2da21b0b411?feed_sort=white&feed_filter=white#Pl_Third_App__11']
+        self.topic_url_list_by_reply_time = ['https://weibo.com/p/1008082bb04e0912c994bdf91da2da21b0b411?feed_sort=timeline&feed_filter=timeline#Pl_Third_App__11', 'https://weibo.com/p/1008086994ed66d0b1ac7ae3f7bb5b06eb369e?k=%E8%84%9A%E8%B8%9D%E6%8C%91%E6%88%98&from=526&_from_=huati_topic']
+        self.topic_url_list_by_release_time = ['https://weibo.com/p/1008082bb04e0912c994bdf91da2da21b0b411?feed_sort=white&feed_filter=white#Pl_Third_App__11', 'https://weibo.com/p/1008086994ed66d0b1ac7ae3f7bb5b06eb369e?feed_sort=white&feed_filter=white#Pl_Third_App__11']
         # ***********************url arg declare**************************
         # pagebar: roll times(value: 0 - n)
         # current_page: ..(value: 1 - n)
         # last_since_id: last page id
         # next_since_id: next page id
         # __rnd: time stamp
-        self.comment_ajax_url = 'https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100808&feed_sort=white&feed_filter=white&pagebar={pb}&tab=home&current_page={cp}&since_id=%7B%22last_since_id%22%3A{lsid}%2C%22res_type%22%3A1%2C%22next_since_id%22%3A{nsid}%7D&pl_name=Pl_Third_App__11&id=1008082bb04e0912c994bdf91da2da21b0b411&script_uri=/p/1008082bb04e0912c994bdf91da2da21b0b411&feed_type=1&page=1&pre_page=1&domain_op=100808&__rnd={time}'
+        self.comment_ajax_url = [
+            'https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100808&k=%E6%96%AF%E5%87%AF%E5%A5%87%E5%85%A8%E6%B0%91battle%E5%AD%A3&from=501&_from_=huati_topic&pagebar={pb}&tab=home&current_page={cp}&since_id=%7B%22last_since_id%22%3A{lsid}%2C%22res_type%22%3A1%2C%22next_since_id%22%3A{nsid}%7D&pl_name=Pl_Third_App__11&id=1008082bb04e0912c994bdf91da2da21b0b411&script_uri=/p/1008082bb04e0912c994bdf91da2da21b0b411&feed_type=1&page={page}&pre_page={pp}&domain_op=100808&__rnd={time}',
+            'https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100808&feed_filter=white&feed_sort=white&current_page={cp}&since_id=%7B%22last_since_id%22%3A{lsid}%2C%22res_type%22%3A1%2C%22next_since_id%22%3A{nsid}%7D&page={page}&pagebar={pb}&tab=home&pl_name=Pl_Third_App__11&id=1008086994ed66d0b1ac7ae3f7bb5b06eb369e&script_uri=/p/1008086994ed66d0b1ac7ae3f7bb5b06eb369e&feed_type=1&pre_page={pp}&domain_op=100808&__rnd={time}'
+        ]
         # ****************************************************************
         self.header = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -94,6 +101,7 @@ class TopicSpider(scrapy.Spider):
             yield topic_item
         yield scrapy.Request(
             self.topic_url_list_by_release_time[index],
+            meta={'index': index},
             headers=self.header,
             callback=self.parse_topic
         )
@@ -101,6 +109,7 @@ class TopicSpider(scrapy.Spider):
     def parse_topic(self, response):
         if not response.body:
             return
+        index = response.meta['index']
         response_body = response.body.decode()
         scripts = re.findall('<script>(.+)</script>', response_body)
         for script in scripts:
@@ -130,24 +139,33 @@ class TopicSpider(scrapy.Spider):
                 if next_page.css('div.W_pages'):
                     try:
                         next_page_href = 'https://weibo.com' + next_page.css('div.W_pages')[0].css('a.page.next.S_txt1.S_line1')[0].xpath('./@href')[0].extract()
+                        TopicSpider.page += 1
+                        TopicSpider.page_bar = 0
+                        TopicSpider.current_page = 1
                         yield scrapy.Request(
                             next_page_href,
+                            meta={'index': index},
                             headers=self.header,
                             callback=self.parse_topic
                         )
-                    except:
+                    except Exception as e:
+                        print(e)
                         return
                 else:
                     if 'last_since_id' in next_page_text and 'next_since_id' in next_page_text:
                         last_since_id = re.findall('last_since_id(.{22})', next_page_text)[0][-16:]
                         next_since_id = re.findall('next_since_id(.{22})', next_page_text)[0][-16:]
                         time_stamp = str(round(time.time(), 3)).replace('.', '')
-                        next_url = self.comment_ajax_url.format(pb=TopicSpider.page_bar, cp=TopicSpider.current_page,
-                                                                lsid=last_since_id, nsid=next_since_id, time=time_stamp)
+                        next_url = self.comment_ajax_url[index].format(pb=TopicSpider.page_bar, cp=TopicSpider.current_page,
+                                                                lsid=last_since_id, nsid=next_since_id, time=time_stamp,
+                                                                       page=TopicSpider.page, pp=TopicSpider.page)
                         TopicSpider.page_bar += 1
                         TopicSpider.current_page += 1
+                        if TopicSpider.print_switch:
+                            print('next_url: ', next_url)
                         yield scrapy.Request(
                             next_url,
+                            meta={'index': index},
                             headers=self.header,
                             callback=self.parse_next_topic
                         )
@@ -155,6 +173,7 @@ class TopicSpider(scrapy.Spider):
     def parse_next_topic(self, response):
         if not response.body:
             return
+        index = response.meta['index']
         body_dict = json.loads(response.body)
         script = body_dict['data']
 
@@ -179,24 +198,35 @@ class TopicSpider(scrapy.Spider):
         if next_page.css('div.W_pages'):
             try:
                 next_page_href = 'https://weibo.com' + next_page.css('div.W_pages')[0].css('a.page.next.S_txt1.S_line1')[0].xpath('./@href')[0].extract()
+                TopicSpider.page += 1
+                TopicSpider.page_bar = 0
+                TopicSpider.current_page = 1
+                if TopicSpider.print_switch:
+                    print('next_page: ', next_page_href)
                 yield scrapy.Request(
                     next_page_href,
+                    meta={'index': index},
                     headers=self.header,
                     callback=self.parse_topic
                 )
-            except:
+            except Exception as e:
+                print(e)
                 return
         else:
             if 'last_since_id' in next_page_text and 'next_since_id' in next_page_text:
                 last_since_id = re.findall('last_since_id(.{22})', next_page_text)[0][-16:]
                 next_since_id = re.findall('next_since_id(.{22})', next_page_text)[0][-16:]
                 time_stamp = str(round(time.time(), 3)).replace('.', '')
-                next_url = self.comment_ajax_url.format(pb=TopicSpider.page_bar, cp=TopicSpider.current_page,
-                                                        lsid=last_since_id, nsid=next_since_id, time=time_stamp)
+                next_url = self.comment_ajax_url[index].format(pb=TopicSpider.page_bar, cp=TopicSpider.current_page,
+                                                        lsid=last_since_id, nsid=next_since_id, time=time_stamp,
+                                                               page=TopicSpider.page, pp=TopicSpider.page)
                 TopicSpider.page_bar += 1
                 TopicSpider.current_page += 1
+                if TopicSpider.print_switch:
+                    print('next_url: ', next_url)
                 yield scrapy.Request(
                     next_url,
+                    meta={'index': index},
                     headers=self.header,
                     callback=self.parse_next_topic
                 )
