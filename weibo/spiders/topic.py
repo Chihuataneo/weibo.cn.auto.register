@@ -134,6 +134,10 @@ class TopicSpider(scrapy.Spider):
                     topic_item = WeiboItem()
                     topic_item['user_url'] = wb.css('div.WB_feed_detail.clearfix').xpath('./div[@class="WB_detail"]/div[1]/a[1]/@href').extract()[0]
                     topic_item['date'] = wb.css('div.WB_feed_detail.clearfix').xpath('./div[@class="WB_detail"]/div[2]/a[1]/@title').extract()[0]
+                    if isCorrectTime(topic_item['date']) == TOO_FORWARD_NEWS:
+                        continue
+                    elif isCorrectTime(topic_item['date']) == TOO_LATE_NEWS:
+                        return
                     topic_item['content'] = wb.css('div.WB_feed_detail.clearfix').xpath('./div[@class="WB_detail"]').css('div.WB_text.W_f14').extract()[0]
                     topic_item['transpond_number'] = wb.xpath('./div[@class="WB_feed_handle"]/div[1]/ul[1]/li[2]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
                     topic_item['comment_number'] = wb.xpath('./div[@class="WB_feed_handle"]/div[1]/ul[1]/li[3]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
@@ -193,6 +197,10 @@ class TopicSpider(scrapy.Spider):
             topic_item = WeiboItem()
             topic_item['user_url'] = wb.css('div.WB_feed_detail.clearfix').xpath('./div[@class="WB_detail"]/div[1]/a[1]/@href').extract()[0]
             topic_item['date'] = wb.css('div.WB_feed_detail.clearfix').xpath('./div[@class="WB_detail"]/div[2]/a[1]/@title').extract()[0]
+            if isCorrectTime(topic_item['date']) == TOO_FORWARD_NEWS:
+                continue
+            elif isCorrectTime(topic_item['date']) == TOO_LATE_NEWS:
+                return
             topic_item['content'] = wb.css('div.WB_feed_detail.clearfix').xpath('./div[@class="WB_detail"]').css('div.WB_text.W_f14').extract()[0]
             topic_item['transpond_number'] = wb.xpath('./div[@class="WB_feed_handle"]/div[1]/ul[1]/li[2]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
             topic_item['comment_number'] = wb.xpath('./div[@class="WB_feed_handle"]/div[1]/ul[1]/li[3]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
