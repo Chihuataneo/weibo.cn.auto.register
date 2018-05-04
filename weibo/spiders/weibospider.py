@@ -4,10 +4,14 @@ from weibo.items import WeiboItem, CommentItem, FanItem
 
 class WeiboSpider(scrapy.Spider):
     name = 'weibo'
+    custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.WeiboPipeline': 300}}
+    tags = ['高靓Tina', '李小科-Kimo', '桃巫齐edie', '李糖', 'MeijiaS', '米娜', 'BULLSNINEONE', '多特蒙德足球俱乐部']
 
     def __init__(self):
         self.sso_login_url = 'https://passport.weibo.cn/sso/login'
-        self.weibo_url_list = ['https://weibo.cn/u/2794430491?f=search_0']
+        self.weibo_url_list = ['https://weibo.cn/tinagao7828', 'https://weibo.cn/kimolee', 'https://weibo.cn/baoruoxi',
+                               'https://weibo.cn/u/1913392383', 'https://weibo.cn/meijias', 'https://weibo.cn/minapie',
+                               'https://weibo.cn/u/2794430491', 'https://weibo.cn/BVBorussiaDortmund09']
         self.header = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.8',
@@ -53,19 +57,22 @@ class WeiboSpider(scrapy.Spider):
         )
 
     def login(self, response):
-        for weibo_url in self.weibo_url_list:
+        for index, weibo_url in enumerate(self.weibo_url_list):
             yield scrapy.Request(
                 weibo_url,
+                meta={'index': index},
                 headers=self.header,
                 callback=self.parse_weibo
             )
 
     def parse_weibo(self, response):
         weibo_item = WeiboItem()
+        index = response.meta['index']
         selector = Selector(response)
         wbs = selector.xpath("//div[@class='c']")
 
         weibo_item['user_url'] = response.url
+        weibo_item['tag'] = WeiboSpider.tags[index]
 
         for i in range(len(wbs) - 2):
             wb_text = wbs[i].extract()
@@ -100,17 +107,18 @@ class WeiboSpider(scrapy.Spider):
                     weibo_item['comment_number'] = a[-2].xpath('./text()').extract()[0]
                     comment_href = a[-2].xpath('./@href').extract()[0]
             yield weibo_item
-            yield Request(comment_href, meta={'weibo': weibo_item['content']}, callback=self.parse_comment)
+            yield Request(comment_href, meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag']}, callback=self.parse_comment)
 
         if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
             next_href = selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
-            yield Request('https://weibo.cn' + next_href, callback=self.parse_weibo)
+            yield Request('https://weibo.cn' + next_href, meta={'index': index}, callback=self.parse_weibo)
 
     def parse_comment(self, response):
         observer_item = CommentItem()
         selector = Selector(response)
         weibo_content = response.meta['weibo']
         observer_item['weibo_content'] = weibo_content
+        observer_item['tag'] = response.meta['tag']
 
         comment_records = selector.xpath('//div[@class="c"]')
         for comment_record in comment_records[3:-1]:
@@ -125,12 +133,11 @@ class WeiboSpider(scrapy.Spider):
             user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
             observer_item['user_url'] = user_url
             yield observer_item
-            yield Request(user_url, meta={'url': user_url, 'weibo': weibo_content}, callback=self.parse_user)
+            yield Request(user_url, meta={'url': user_url, 'weibo': weibo_content, 'tag': observer_item['tag']}, callback=self.parse_user)
 
         if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
             next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
-            # yield Request(next_href, meta={'item': weibo_item, 'weibo': weibo_content}, callback=self.parse_comment)
-            yield Request(next_href, meta={'weibo': weibo_content}, callback=self.parse_comment)
+            yield Request(next_href, meta={'weibo': weibo_content, 'tag': observer_item['tag']}, callback=self.parse_comment)
 
     def parse_user(self, response):
         user_item = FanItem()
@@ -139,6 +146,7 @@ class WeiboSpider(scrapy.Spider):
         selector = Selector(response)
         user_info = selector.xpath('//div[@class="u"]')[0]
         user_item['user_url'] = user_url
+        user_item['tag'] = response.meta['tag']
         user_attrs = re.findall('.*([\u4e00-\u9fa5]+/[\u4e00-\u9fa5]+).*', user_info.xpath('//span[@class="ctt"]').extract()[0])[0].split('/')
         user_item['sex'] = ''
         user_item['location'] = ''

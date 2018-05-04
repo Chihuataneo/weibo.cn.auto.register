@@ -16,16 +16,18 @@ class WeiboPipeline(object):
     #         self.f = open('weibo_result.txt', 'a+')
 
     def process_item(self, item, spider):
+        tag = item['tag']
+
         if isinstance(item, WeiboItem):
-            self.f = open('result/weibo_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/' + tag + '_weibo_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, FanItem):
-            self.f = open('result/fans_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/' + tag + '_fans_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, CommentItem):
-            self.f = open('result/comment_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/' + tag + '_comment_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         return item
