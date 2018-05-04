@@ -9,12 +9,6 @@ from weibo.items import *
 
 
 class WeiboPipeline(object):
-    # def __init__(self):
-    #     if sys.version > '3':
-    #         self.f = open('weibo_result.txt', 'a+', encoding='utf-8')
-    #     else:
-    #         self.f = open('weibo_result.txt', 'a+')
-
     def process_item(self, item, spider):
         tag = item['tag']
 
@@ -37,12 +31,6 @@ class WeiboPipeline(object):
 
 
 class TopicPipeline(object):
-    # def __init__(self):
-    #     if sys.version > '3':
-    #         self.f = open('weibo_result.txt', 'a+', encoding='utf-8')
-    #     else:
-    #         self.f = open('weibo_result.txt', 'a+')
-
     def process_item(self, item, spider):
         tag = item['tag']
 
