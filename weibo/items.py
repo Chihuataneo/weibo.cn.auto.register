@@ -15,7 +15,7 @@ class WeiboItem(scrapy.Item):
     transpond_number = scrapy.Field()
     comment_number = scrapy.Field()
     date = scrapy.Field()
-    # observer = scrapy.Field()
+    tag = scrapy.Field()
 
 
 class CommentItem(scrapy.Item):
@@ -23,6 +23,7 @@ class CommentItem(scrapy.Item):
     user_url = scrapy.Field()
     content = scrapy.Field()
     weibo_content = scrapy.Field()
+    tag = scrapy.Field()
 
 
 class FanItem(scrapy.Item):
@@ -33,9 +34,11 @@ class FanItem(scrapy.Item):
     sex = scrapy.Field()
     location = scrapy.Field()
     weibo_content = scrapy.Field()
+    tag = scrapy.Field()
 
 
 class TopicItem(scrapy.Item):
     read_times = scrapy.Field()
     discuss_times = scrapy.Field()
     fans_number = scrapy.Field()
+    tag = scrapy.Field()

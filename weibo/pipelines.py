@@ -42,12 +42,14 @@ class TopicPipeline(object):
     #         self.f = open('weibo_result.txt', 'a+')
 
     def process_item(self, item, spider):
+        tag = item['tag']
+
         if isinstance(item, TopicItem):
-            self.f = open('result/topic_info.txt', 'a+', encoding='utf-8')
+            self.f = open('result/' + tag + '_topic_info.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, WeiboItem):
-            self.f = open('result/topic_weibo_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/' + tag + '_topic_weibo_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         return item
