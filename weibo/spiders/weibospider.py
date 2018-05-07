@@ -127,6 +127,10 @@ class WeiboSpider(scrapy.Spider):
             yield Request('https://weibo.cn' + next_href, meta={'index': index}, callback=self.parse_weibo)
 
     def parse_comment(self, response):
+        try:
+            current_page_no = int(re.findall('page=([0-9]+)', response.url)[0])
+        except:
+            pass
         observer_item = CommentItem()
         selector = Selector(response)
         weibo_content = response.meta['weibo']
@@ -157,21 +161,19 @@ class WeiboSpider(scrapy.Spider):
             if selector.xpath('//div[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
                 next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
                 try:
+                    with open('error.log', 'w') as f:
+                        f.write(next_href)
                     yield Request(next_href, meta={'weibo': weibo_content, 'tag': observer_item['tag']}, callback=self.parse_comment)
                 except Exception as e:
                     with open('error.log', 'w') as f:
                         f.write(str(e))
-                    # 微博部分评论页的内容为空
-                    # next_page_no = re.findall('https://weibo.cn/comment/G09VUuIAg?uid=1291477752&rl=0&page=(.+)', next_href)[0]
-                    # next_page = 'https://weibo.cn/comment/G09VUuIAg?uid=1291477752&rl=0&page=' + str(int(next_page_no) + 2)
-                    # yield Request(next_page, meta={'weibo': weibo_content, 'tag': observer_item['tag']},
-                    #               callback=self.parse_comment)
         except Exception as e:
             print(selector.xpath('//div[@id="pagelist"]').extract())
             with open('error.log', 'w') as f:
                 f.write(str(e))
-            next_page_no = re.findall('page=(.+)', 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0])[0]
-            next_page = 'https://weibo.cn/comment/G09VUuIAg?uid=1291477752&rl=0&page=' + str(int(next_page_no) + 2)
+            next_page = 'https://weibo.cn/comment/G09VUuIAg?uid=1291477752&rl=0&page=' + str(current_page_no + 2)
+            with open('error.log', 'w') as f:
+                f.write(next_page)
             yield Request(next_page, meta={'weibo': weibo_content, 'tag': observer_item['tag']},
                           callback=self.parse_comment)
 
