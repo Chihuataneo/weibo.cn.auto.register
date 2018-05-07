@@ -5,13 +5,19 @@ from weibo.items import WeiboItem, CommentItem, FanItem
 class WeiboSpider(scrapy.Spider):
     name = 'weibo'
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.WeiboPipeline': 300}}
-    tags = ['高靓Tina', '李小科-Kimo', '桃巫齐edie', '李糖', 'MeijiaS', '米娜', 'BULLSNINEONE', '多特蒙德足球俱乐部']
+    tags = [
+        # '高靓Tina', '李小科-Kimo', '桃巫齐edie', '李糖', 'MeijiaS', '米娜', 'BULLSNINEONE', '多特蒙德足球俱乐部',
+        u'李易峰',
+    ]
 
     def __init__(self):
         self.sso_login_url = 'https://passport.weibo.cn/sso/login'
-        self.weibo_url_list = ['https://weibo.cn/tinagao7828', 'https://weibo.cn/kimolee', 'https://weibo.cn/baoruoxi',
-                               'https://weibo.cn/u/1913392383', 'https://weibo.cn/meijias', 'https://weibo.cn/minapie',
-                               'https://weibo.cn/u/2794430491', 'https://weibo.cn/BVBorussiaDortmund09']
+        self.weibo_url_list = [
+            # 'https://weibo.cn/tinagao7828', 'https://weibo.cn/kimolee', 'https://weibo.cn/baoruoxi',
+            # 'https://weibo.cn/u/1913392383', 'https://weibo.cn/meijias', 'https://weibo.cn/minapie',
+            # 'https://weibo.cn/u/2794430491', 'https://weibo.cn/BVBorussiaDortmund09'
+            'https://weibo.cn/liyifeng2007',
+        ]
         self.header = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.8',
@@ -75,10 +81,17 @@ class WeiboSpider(scrapy.Spider):
         weibo_item['tag'] = WeiboSpider.tags[index]
 
         for i in range(len(wbs) - 2):
+            flag = 0
             wb_text = wbs[i].extract()
             comment_href = ''
             divs = wbs[i].xpath('./div')
             weibo_item['content'] = re.findall('<span class="ctt">(.+)</span>', divs[0].xpath('./span[@class="ctt"]').extract()[0])[0]
+            for key in FILTER_WORDS:
+                if key in weibo_item['content']:
+                    flag = 1
+                    break
+            if flag == 0:
+                continue
 
             if len(divs) == 1:
                 date = divs[0].xpath('./span[@class="ct"]/text()').extract()[0]
@@ -122,7 +135,12 @@ class WeiboSpider(scrapy.Spider):
 
         comment_records = selector.xpath('//div[@class="c"]')
         for comment_record in comment_records[3:-1]:
-            observer_item['user'] = comment_record.xpath('./a[1]/text()').extract()[0]
+            try:
+                observer_item['user'] = comment_record.xpath('./a[1]/text()').extract()[0]
+            except Exception as e:
+                with open('error.log', 'w') as f:
+                    f.write(str(e))
+                continue
             if u"查看更多热门" in observer_item['user']:
                 continue
             try:
@@ -133,11 +151,29 @@ class WeiboSpider(scrapy.Spider):
             user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
             observer_item['user_url'] = user_url
             yield observer_item
-            yield Request(user_url, meta={'url': user_url, 'weibo': weibo_content, 'tag': observer_item['tag']}, callback=self.parse_user)
+            # yield Request(user_url, meta={'url': user_url, 'weibo': weibo_content, 'tag': observer_item['tag']}, callback=self.parse_user)
 
-        if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
-            next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
-            yield Request(next_href, meta={'weibo': weibo_content, 'tag': observer_item['tag']}, callback=self.parse_comment)
+        try:
+            if selector.xpath('//div[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
+                next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
+                try:
+                    yield Request(next_href, meta={'weibo': weibo_content, 'tag': observer_item['tag']}, callback=self.parse_comment)
+                except Exception as e:
+                    with open('error.log', 'w') as f:
+                        f.write(str(e))
+                    # 微博部分评论页的内容为空
+                    # next_page_no = re.findall('https://weibo.cn/comment/G09VUuIAg?uid=1291477752&rl=0&page=(.+)', next_href)[0]
+                    # next_page = 'https://weibo.cn/comment/G09VUuIAg?uid=1291477752&rl=0&page=' + str(int(next_page_no) + 2)
+                    # yield Request(next_page, meta={'weibo': weibo_content, 'tag': observer_item['tag']},
+                    #               callback=self.parse_comment)
+        except Exception as e:
+            print(selector.xpath('//div[@id="pagelist"]').extract())
+            with open('error.log', 'w') as f:
+                f.write(str(e))
+            next_page_no = re.findall('page=(.+)', 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0])[0]
+            next_page = 'https://weibo.cn/comment/G09VUuIAg?uid=1291477752&rl=0&page=' + str(int(next_page_no) + 2)
+            yield Request(next_page, meta={'weibo': weibo_content, 'tag': observer_item['tag']},
+                          callback=self.parse_comment)
 
     def parse_user(self, response):
         user_item = FanItem()
