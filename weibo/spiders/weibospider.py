@@ -120,7 +120,12 @@ class WeiboSpider(scrapy.Spider):
                     weibo_item['comment_number'] = a[-2].xpath('./text()').extract()[0]
                     comment_href = a[-2].xpath('./@href').extract()[0]
             yield weibo_item
-            yield Request(comment_href, meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag']}, callback=self.parse_comment)
+            comment_number = re.findall('([0-9]+)', weibo_item['comment_number'])[0]
+            if comment_number.isdigit():
+                num_of_page = int(int(comment_number)/10) + 1
+            else:
+                num_of_page = 0
+            yield Request(comment_href, meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag'], 'page': num_of_page}, callback=self.parse_comment)
 
         if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
             next_href = selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
@@ -131,13 +136,14 @@ class WeiboSpider(scrapy.Spider):
             current_page_no = int(re.findall('page=([0-9]+)', response.url)[0])
         except:
             pass
+        num_of_page = response.meta['page']
         observer_item = CommentItem()
         selector = Selector(response)
         weibo_content = response.meta['weibo']
         observer_item['weibo_content'] = weibo_content
         observer_item['tag'] = response.meta['tag']
-
         comment_records = selector.xpath('//div[@class="c"]')
+
         for comment_record in comment_records[3:-1]:
             try:
                 observer_item['user'] = comment_record.xpath('./a[1]/text()').extract()[0]
@@ -153,7 +159,6 @@ class WeiboSpider(scrapy.Spider):
                 observer_item['content'] = ''
                 with open('error.log', 'a+') as f:
                     f.write(str(e) + '\n')
-
             user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
             observer_item['user_url'] = user_url
             yield observer_item
@@ -163,20 +168,19 @@ class WeiboSpider(scrapy.Spider):
             if selector.xpath('//div[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
                 next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
                 try:
-                    with open('error.log', 'a+') as f:
-                        f.write(next_href + '\n')
-                    yield Request(next_href, meta={'weibo': weibo_content, 'tag': observer_item['tag']}, callback=self.parse_comment)
+                    yield Request(next_href, meta={'weibo': weibo_content, 'tag': observer_item['tag'], 'page': num_of_page}, callback=self.parse_comment)
                 except Exception as e:
                     with open('error.log', 'a+') as f:
                         f.write(str(e) + '\n')
         except Exception as e:
-            print(selector.xpath('//div[@id="pagelist"]').extract())
+            if current_page_no >= num_of_page:
+                return
             with open('error.log', 'a+') as f:
                 f.write(str(e) + '\n')
             next_page = 'https://weibo.cn/comment/G09VUuIAg?uid=1291477752&rl=0&page=' + str(current_page_no + 2)
             with open('error.log', 'a+') as f:
                 f.write(next_page + '\n')
-            yield Request(next_page, meta={'weibo': weibo_content, 'tag': observer_item['tag']},
+            yield Request(next_page, meta={'weibo': weibo_content, 'tag': observer_item['tag'], 'page': num_of_page},
                           callback=self.parse_comment)
 
     def parse_user(self, response):
