@@ -142,7 +142,7 @@ class WeiboSpider(scrapy.Spider):
             try:
                 observer_item['user'] = comment_record.xpath('./a[1]/text()').extract()[0]
             except Exception as e:
-                with open('error.log', 'w') as f:
+                with open('error.log', 'a+') as f:
                     f.write(str(e))
                 continue
             if u"查看更多热门" in observer_item['user']:
@@ -161,18 +161,18 @@ class WeiboSpider(scrapy.Spider):
             if selector.xpath('//div[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
                 next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
                 try:
-                    with open('error.log', 'w') as f:
+                    with open('error.log', 'a+') as f:
                         f.write(next_href)
                     yield Request(next_href, meta={'weibo': weibo_content, 'tag': observer_item['tag']}, callback=self.parse_comment)
                 except Exception as e:
-                    with open('error.log', 'w') as f:
+                    with open('error.log', 'a+') as f:
                         f.write(str(e))
         except Exception as e:
             print(selector.xpath('//div[@id="pagelist"]').extract())
-            with open('error.log', 'w') as f:
+            with open('error.log', 'a+') as f:
                 f.write(str(e))
             next_page = 'https://weibo.cn/comment/G09VUuIAg?uid=1291477752&rl=0&page=' + str(current_page_no + 2)
-            with open('error.log', 'w') as f:
+            with open('error.log', 'a+') as f:
                 f.write(next_page)
             yield Request(next_page, meta={'weibo': weibo_content, 'tag': observer_item['tag']},
                           callback=self.parse_comment)
