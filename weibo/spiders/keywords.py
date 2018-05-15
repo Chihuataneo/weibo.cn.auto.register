@@ -11,12 +11,6 @@ class KeyWordsSpider(scrapy.Spider):
 
     def __init__(self):
         self.sso_login_url = 'https://passport.weibo.cn/sso/login'
-        self.weibo_url_list = [
-            # 'https://weibo.cn/tinagao7828', 'https://weibo.cn/kimolee', 'https://weibo.cn/baoruoxi',
-            # 'https://weibo.cn/u/1913392383', 'https://weibo.cn/meijias', 'https://weibo.cn/minapie',
-            # 'https://weibo.cn/u/2794430491', 'https://weibo.cn/BVBorussiaDortmund09'
-            'https://weibo.cn/liyifeng2007',
-        ]
         self.header = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.8',
@@ -25,6 +19,7 @@ class KeyWordsSpider(scrapy.Spider):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.104 Safari/537.36 Core/1.53.4843.400 QQBrowser/9.7.13021.400',
             'Referer': 'https://passport.weibo.cn/signin/login?entry=mweibo&r=http%3A%2F%2Fm.weibo.cn'
         }
+        self.ids = []
 
     def start_requests(self):
         return [
@@ -58,17 +53,8 @@ class KeyWordsSpider(scrapy.Spider):
         yield scrapy.Request(
             passport_url,
             headers=self.header,
-            callback=self.login
+            callback=self.search_key
         )
-
-    def login(self, response):
-        for index, weibo_url in enumerate(self.weibo_url_list):
-            yield scrapy.Request(
-                weibo_url,
-                meta={'index': index},
-                headers=self.header,
-                callback=self.search_key
-            )
 
     def search_key(self, response):
         for key in self.tags:
@@ -80,9 +66,35 @@ class KeyWordsSpider(scrapy.Spider):
                     'keyword': key,
                     'smblog': u'搜微博'
                 },
+                meta={'tag': key},
                 headers=self.header,
                 callback=self.parse_weibo
             )
 
     def parse_weibo(self, response):
-        pass
+        tag = response.meta['tag']
+        selector = Selector(response)
+        weibos = selector.css('div.c')
+
+        for weibo in weibos:
+            if len(weibo.xpath('./@id')) > 0:
+                id = weibo.xpath('./@id').extract()[0]
+                if id not in self.ids:
+                    self.ids.append(id)
+                    weibo_item = WeiboItem()
+                    weibo_item['user_url'] = weibo.xpath('./div[1]/a[1]/@href').extract()[0]
+                    weibo_item['content'] = weibo.xpath('./div[1]/span[@class="ctt"]').extract()[0]
+                    divs = weibo.xpath('./div')
+                    for a_text in divs[-1].xpath('./a/text()').extract():
+                        if u'赞' in a_text:
+                            weibo_item['support_number'] = a_text
+                        if u'转发' in a_text:
+                            weibo_item['transpond_number'] = a_text
+                        if u'评论' in a_text:
+                            weibo_item['comment_number'] = a_text
+
+                    weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
+                    weibo_item['tag'] = tag
+                    print(weibo_item)
+
+
