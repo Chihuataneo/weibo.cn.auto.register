@@ -18,10 +18,12 @@ class TopicSpider(scrapy.Spider):
             'battle',
             'lj'
         ]
+        # 回复时间排序url
         self.topic_url_list_by_reply_time = [
             'https://weibo.com/p/1008082bb04e0912c994bdf91da2da21b0b411?feed_sort=timeline&feed_filter=timeline#Pl_Third_App__11',
             'https://weibo.com/p/1008086994ed66d0b1ac7ae3f7bb5b06eb369e?k=%E8%84%9A%E8%B8%9D%E6%8C%91%E6%88%98&from=526&_from_=huati_topic'
         ]
+        # 发布时间排序url
         self.topic_url_list_by_release_time = [
             'https://weibo.com/p/1008082bb04e0912c994bdf91da2da21b0b411?feed_sort=white&feed_filter=white#Pl_Third_App__11',
             'https://weibo.com/p/1008086994ed66d0b1ac7ae3f7bb5b06eb369e?feed_sort=white&feed_filter=white#Pl_Third_App__11'
@@ -32,11 +34,13 @@ class TopicSpider(scrapy.Spider):
         # last_since_id: last page id
         # next_since_id: next page id
         # __rnd: time stamp
+        # ajax链接模板
         self.comment_ajax_url = [
             'https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100808&k=%E6%96%AF%E5%87%AF%E5%A5%87%E5%85%A8%E6%B0%91battle%E5%AD%A3&from=501&_from_=huati_topic&pagebar={pb}&tab=home&current_page={cp}&since_id=%7B%22last_since_id%22%3A{lsid}%2C%22res_type%22%3A1%2C%22next_since_id%22%3A{nsid}%7D&pl_name=Pl_Third_App__11&id=1008082bb04e0912c994bdf91da2da21b0b411&script_uri=/p/1008082bb04e0912c994bdf91da2da21b0b411&feed_type=1&page={page}&pre_page={pp}&domain_op=100808&__rnd={time}',
             'https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100808&feed_sort=white&feed_filter=white&pagebar={pb}&tab=home&current_page={cp}&since_id=%7B%22last_since_id%22%3A{lsid}%2C%22res_type%22%3A1%2C%22next_since_id%22%3A{nsid}%7D&pl_name=Pl_Third_App__11&id=1008086994ed66d0b1ac7ae3f7bb5b06eb369e&script_uri=/p/1008086994ed66d0b1ac7ae3f7bb5b06eb369e&feed_type=1&page={page}&pre_page={pp}&domain_op=100808&__rnd={time}'
         ]
         # ****************************************************************
+
         self.header = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.8',

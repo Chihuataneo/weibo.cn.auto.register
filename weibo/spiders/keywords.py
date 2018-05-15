@@ -2,12 +2,11 @@
 from weibo.common import *
 from weibo.items import WeiboItem, CommentItem, FanItem
 
-class WeiboSpider(scrapy.Spider):
-    name = 'weibo'
-    custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.WeiboPipeline': 300}}
+class KeyWordsSpider(scrapy.Spider):
+    name = 'key'
+    custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.KeywordsPipeline': 300}}
     tags = [
-        # '高靓Tina', '李小科-Kimo', '桃巫齐edie', '李糖', 'MeijiaS', '米娜', 'BULLSNINEONE', '多特蒙德足球俱乐部',
-        u'李易峰',
+
     ]
 
     def __init__(self):
@@ -78,7 +77,7 @@ class WeiboSpider(scrapy.Spider):
         wbs = selector.xpath("//div[@class='c']")
 
         weibo_item['user_url'] = response.url
-        weibo_item['tag'] = WeiboSpider.tags[index]
+        weibo_item['tag'] = ICSpider.tags[index]
 
         for i in range(len(wbs) - 2):
             flag = 0

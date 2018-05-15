@@ -67,7 +67,8 @@ DOWNLOAD_DELAY = 3
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
    'weibo.pipelines.WeiboPipeline': 300,
-   'weibo.pipelines.TopicPipeline': 400,
+   'weibo.pipelines.TopicPipeline': 300,
+   'weibo.pipelines.KeywordsPipeline': 300
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

@@ -46,3 +46,7 @@ class TopicPipeline(object):
 
     def close_spider(self, spider):
         self.f.close()
+
+
+class KeywordsPipeline(object):
+    pass
