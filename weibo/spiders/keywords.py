@@ -92,22 +92,22 @@ class KeyWordsSpider(scrapy.Spider):
                             if len(a.xpath('./text()').extract()) < 1:
                                 continue
                             if u'赞' in a.xpath('./text()').extract()[0]:
-                                weibo_item['support_number'] = a.xpath('./text()').extract()[0]
+                                weibo_item['support_number'] = re.findall('([0-9]+)', a.xpath('./text()').extract()[0])[0]
                             if u'转发' in a.xpath('./text()').extract()[0]:
-                                weibo_item['transpond_number'] = a.xpath('./text()').extract()[0]
+                                weibo_item['transpond_number'] = re.findall('([0-9]+)', a.xpath('./text()').extract()[0])[0]
                                 trans_href = a.xpath('./@href').extract()[0]
                             if u'评论' in a.xpath('./text()').extract()[0]:
-                                weibo_item['comment_number'] = a.xpath('./text()').extract()[0]
+                                weibo_item['comment_number'] = re.findall('([0-9]+)', a.xpath('./text()').extract()[0])[0]
                                 comment_href = a.xpath('./@href').extract()[0]
                         weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
                         weibo_item['tag'] = tag
                         yield weibo_item
-                        comment_number = re.findall('([0-9]+)', weibo_item['comment_number'])[0]
+                        comment_number = weibo_item['comment_number']
                         if comment_number.isdigit():
                             num_of_cpage = int(int(comment_number) / 10) + 1
                         else:
                             num_of_cpage = 0
-                        trans_number = re.findall('([0-9]+)', weibo_item['support_number'])[0]
+                        trans_number = weibo_item['support_number']
                         if comment_number.isdigit():
                             num_of_tpage = int(int(trans_number) / 10) + 1
                         else:
@@ -205,7 +205,7 @@ class KeyWordsSpider(scrapy.Spider):
                 trans_item['user_url'] = user_href
                 trans_item['content'] = c.xpath('./text()').extract()[0]
                 trans_item['weibo_content'] = meta['content']
-                trans_item['support_number'] = c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0]
+                trans_item['support_number'] = re.findall('([0-9]+)', c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
                 trans_item['tag'] = meta['tag']
                 yield trans_item
         try:
@@ -223,36 +223,36 @@ class KeyWordsSpider(scrapy.Spider):
             yield Request(next_page, meta=response.meta, callback=self.parse_trans)
 
 
-    def filter_weibo(self, response):
-        if not response.body:
-            return
-        tag = response.meta['tag'] + '_' + 'Trans'
-        content = response.meta['content']
-        selector = Selector(response)
-        weibos = selector.css('div.c')
-        flag = 0
-        if len(weibos) > 0:
-            for weibo in weibos:
-                if len(weibo.xpath('./@id')) > 0:
-                    if content in weibo.extract():
-                        divs = weibo.xpath('./div')
-                        weibo_item = WeiboItem()
-                        weibo_item['user_url'] = divs[1].xpath('./a[1]/@href').extract()[0]
-                        weibo_item['content'] = content
-                        for a in divs[-1].xpath('./a'):
-                            if len(a.xpath('./text()').extract()) < 1:
-                                continue
-                            if u'赞' in a.xpath('./text()').extract()[0]:
-                                weibo_item['support_number'] = a.xpath('./text()').extract()[0]
-                            if u'转发' in a.xpath('./text()').extract()[0]:
-                                weibo_item['transpond_number'] = a.xpath('./text()').extract()[0]
-                            if u'评论' in a.xpath('./text()').extract()[0]:
-                                weibo_item['comment_number'] = a.xpath('./text()').extract()[0]
-                        weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
-                        weibo_item['tag'] = tag
-                        flag = 1
-                        print(weibo_item)
-                        break
+    # def filter_weibo(self, response):
+    #     if not response.body:
+    #         return
+    #     tag = response.meta['tag'] + '_' + 'Trans'
+    #     content = response.meta['content']
+    #     selector = Selector(response)
+    #     weibos = selector.css('div.c')
+    #     flag = 0
+    #     if len(weibos) > 0:
+    #         for weibo in weibos:
+    #             if len(weibo.xpath('./@id')) > 0:
+    #                 if content in weibo.extract():
+    #                     divs = weibo.xpath('./div')
+    #                     weibo_item = WeiboItem()
+    #                     weibo_item['user_url'] = divs[1].xpath('./a[1]/@href').extract()[0]
+    #                     weibo_item['content'] = content
+    #                     for a in divs[-1].xpath('./a'):
+    #                         if len(a.xpath('./text()').extract()) < 1:
+    #                             continue
+    #                         if u'赞' in a.xpath('./text()').extract()[0]:
+    #                             weibo_item['support_number'] = a.xpath('./text()').extract()[0]
+    #                         if u'转发' in a.xpath('./text()').extract()[0]:
+    #                             weibo_item['transpond_number'] = a.xpath('./text()').extract()[0]
+    #                         if u'评论' in a.xpath('./text()').extract()[0]:
+    #                             weibo_item['comment_number'] = a.xpath('./text()').extract()[0]
+    #                     weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
+    #                     weibo_item['tag'] = tag
+    #                     flag = 1
+    #                     print(weibo_item)
+    #                     break
         if flag == 0:
             if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
                 next_href = selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
