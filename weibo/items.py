@@ -26,6 +26,15 @@ class CommentItem(scrapy.Item):
     tag = scrapy.Field()
 
 
+class TransItem(scrapy.Item):
+    user = scrapy.Field()
+    user_url = scrapy.Field()
+    content = scrapy.Field()
+    weibo_content = scrapy.Field()
+    support_number = scrapy.Field()
+    tag = scrapy.Field()
+
+
 class FanItem(scrapy.Item):
     user_url = scrapy.Field()
     attent = scrapy.Field()
