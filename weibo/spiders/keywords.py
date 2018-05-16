@@ -101,7 +101,7 @@ class KeyWordsSpider(scrapy.Spider):
                                 comment_href = a.xpath('./@href').extract()[0]
                         weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
                         weibo_item['tag'] = tag
-                        # yield weibo_item
+                        yield weibo_item
                         comment_number = re.findall('([0-9]+)', weibo_item['comment_number'])[0]
                         if comment_number.isdigit():
                             num_of_cpage = int(int(comment_number) / 10) + 1
@@ -124,20 +124,20 @@ class KeyWordsSpider(scrapy.Spider):
                             headers=self.header,
                             callback=self.parse_trans
                         )
-        # try:
-        #     page = selector.css('div.pa')[0]
-        #     a_list = page.xpath('./form[1]/div[1]/a')
-        #     for a in a_list:
-        #         if u'下页' in a.xpath('./text()').extract()[0]:
-        #             href = 'https://weibo.cn' + a.xpath('./@href').extract()[0]
-        #             yield scrapy.Request(
-        #                 url=href,
-        #                 meta={'tag': tag},
-        #                 headers=self.header,
-        #                 callback=self.parse_weibo
-        #             )
-        # except Exception as e:
-        #     print(e)
+        try:
+            page = selector.css('div.pa')[0]
+            a_list = page.xpath('./form[1]/div[1]/a')
+            for a in a_list:
+                if u'下页' in a.xpath('./text()').extract()[0]:
+                    href = 'https://weibo.cn' + a.xpath('./@href').extract()[0]
+                    yield scrapy.Request(
+                        url=href,
+                        meta={'tag': tag},
+                        headers=self.header,
+                        callback=self.parse_weibo
+                    )
+        except Exception as e:
+            print(e)
 
     def parse_comment(self, response):
         if not response.body:
@@ -171,7 +171,7 @@ class KeyWordsSpider(scrapy.Spider):
                     f.write(str(e) + '\n')
             user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
             observer_item['user_url'] = user_url
-            # yield observer_item
+            yield observer_item
         try:
             if selector.xpath('//div[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
                 next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
@@ -219,7 +219,7 @@ class KeyWordsSpider(scrapy.Spider):
         except Exception as e:
             if current_page_no >= num_of_page:
                 return
-            next_page = next_page = re.findall('(https.+&page=)', response.url)[0] + str(current_page_no + 2)
+            next_page = re.findall('(https.+&page=)', response.url)[0] + str(current_page_no + 2)
             yield Request(next_page, meta=response.meta, callback=self.parse_trans)
 
 
