@@ -253,17 +253,7 @@ class KeyWordsSpider(scrapy.Spider):
     #                     flag = 1
     #                     print(weibo_item)
     #                     break
-        if flag == 0:
-            if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
-                next_href = selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
-                yield Request('https://weibo.cn' + next_href, meta=response.meta, callback=self.filter_weibo)
-
-
-
-
-
-
-
-
-
-
+    #     if flag == 0:
+    #         if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
+    #             next_href = selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
+    #             yield Request('https://weibo.cn' + next_href, meta=response.meta, callback=self.filter_weibo)
