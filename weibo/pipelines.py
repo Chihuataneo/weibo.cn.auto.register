@@ -49,4 +49,13 @@ class TopicPipeline(object):
 
 
 class KeywordsPipeline(object):
-    pass
+    def process_item(self, item, spider):
+        tag = item['tag']
+
+        if isinstance(item, WeiboItem):
+            self.f = open('result/' + tag + '_weibo_result.txt', 'a+', encoding='utf-8')
+            line = json.dumps(dict(item), ensure_ascii=False) + '\n'
+            self.f.write(line)
+
+    def close_spider(self, spider):
+        self.f.close()
