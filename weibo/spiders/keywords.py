@@ -6,7 +6,7 @@ class KeyWordsSpider(scrapy.Spider):
     name = 'key'
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.KeywordsPipeline': 300}}
     tags = [
-        'PUMA 板鞋',
+        '斯凯奇 小白鞋',
     ]
 
     def __init__(self):
@@ -74,6 +74,8 @@ class KeyWordsSpider(scrapy.Spider):
             )
 
     def parse_weibo(self, response):
+        if not response.body:
+            return
         tag = response.meta['tag']
         selector = Selector(response)
         weibos = selector.css('div.c')
@@ -143,15 +145,18 @@ class KeyWordsSpider(scrapy.Spider):
                         callback=self.parse_weibo
                     )
         except Exception as e:
-            print(e)
+            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+            log_err(e, info)
 
     def parse_comment(self, response):
         if not response.body:
             return
         try:
             current_page_no = int(re.findall('page=([0-9]+)', response.url)[0])
-        except:
+        except Exception as e:
             current_page_no = 1
+            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+            log_err(e, info)
         num_of_page = response.meta['page']
         weibo_content = response.meta['content']
         weibo_date = response.meta['date']
@@ -166,9 +171,8 @@ class KeyWordsSpider(scrapy.Spider):
             try:
                 observer_item['user'] = comment_record.xpath('./a[1]/text()').extract()[0]
             except Exception as e:
-                with open('error.log', 'a+') as f:
-                    f.write(str(e) + '\n')
-                    f.write('line: 168' + '\n')
+                info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+                log_err(e, info)
                 continue
             if u"查看更多热门" in observer_item['user']:
                 continue
@@ -176,9 +180,8 @@ class KeyWordsSpider(scrapy.Spider):
                 observer_item['content'] = re.findall('<span class="ctt">(.+)</span>', comment_record.xpath('./span[@class="ctt"]').extract()[0])[0]
             except Exception as e:
                 observer_item['content'] = ''
-                with open('error.log', 'a+') as f:
-                    f.write(str(e) + '\n')
-                    f.write('line: 179' + '\n')
+                info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+                log_err(e, info)
             user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
             observer_item['user_url'] = user_url
             yield observer_item
@@ -188,10 +191,11 @@ class KeyWordsSpider(scrapy.Spider):
                 try:
                     yield Request(next_href, meta=response.meta, callback=self.parse_comment)
                 except Exception as e:
-                    with open('error.log', 'a+') as f:
-                        f.write(str(e) + '\n')
-                        f.write('line: 192' + '\n')
+                    info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+                    log_err(e, info)
         except Exception as e:
+            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+            log_err(e, info)
             if current_page_no >= num_of_page:
                 return
             next_page = re.findall('(https.+&page=)', response.url)[0] + str(current_page_no + 2)
@@ -202,8 +206,10 @@ class KeyWordsSpider(scrapy.Spider):
             return
         try:
             current_page_no = int(re.findall('page=([0-9]+)', response.url)[0])
-        except:
+        except Exception as e:
             current_page_no = 1
+            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+            log_err(e, info)
         num_of_page = response.meta['page']
         meta = response.meta
         selector = Selector(response)
@@ -226,16 +232,16 @@ class KeyWordsSpider(scrapy.Spider):
                 try:
                     yield Request(next_href, meta=response.meta, callback=self.parse_trans)
                 except Exception as e:
-                    with open('error.log', 'a+') as f:
-                        f.write(str(e) + '\n')
-                        f.write('line: 228' + '\n')
+                    info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+                    log_err(e, info)
         except Exception as e:
+            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+            log_err(e, info)
             if current_page_no >= num_of_page:
                 return
             print(response.url)
             next_page = re.findall('(https.+&page=)', response.url)[0] + str(current_page_no + 2)
             yield Request(next_page, meta=response.meta, callback=self.parse_trans)
-
 
     def filter_weibo(self, response):
         if not response.body:

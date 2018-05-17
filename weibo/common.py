@@ -52,3 +52,9 @@ def isCorrectTime(time_para):
     except Exception as e:
         print(e)
         return TOO_LATE_NEWS
+
+
+def log_err(e, info):
+    with open('error.log', 'a+') as f:
+        f.write(str(e) + '\n')
+        f.write(info + '\n\n')
