@@ -12,8 +12,8 @@ from scrapy import signals
 from scrapy import Selector
 from scrapy.http import Request, FormRequest
 
-TIME_FILTER_START = 20180101
-TIME_FILTER_END = 20180501
+TIME_FILTER_START = 20180515
+TIME_FILTER_END = 20180601
 
 TOO_LATE_NEWS = 0
 TOO_FORWARD_NEWS = 1
@@ -21,7 +21,7 @@ CORRECT_NEWS = 2
 
 INFO_LEN = 3
 
-FILTER_WORDS = [u'斯凯奇', 'SKECHERS', 'skechers']
+FILTER_WORDS = [u'成都']
 
 def isCorrectTime(time_para):
     try:

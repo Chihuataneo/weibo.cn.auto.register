@@ -81,7 +81,6 @@ class KeyWordsSpider(scrapy.Spider):
         if tag:
             keys = tag.split(' ')
             word = '+'.join(keys)
-
         selector = Selector(response)
         if len(selector.xpath('//div[@class="pa"]')) > 0:
             weibo_page_text = selector.xpath('//div[@class="pa"]/form[1]/div[1]/text()').extract()[-1]
