@@ -6,8 +6,9 @@ class KeyWordsSpider(scrapy.Spider):
     name = 'key'
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.KeywordsPipeline': 300}}
     tags = [
-        '斯凯奇 小白鞋',
+        'streetLA',
     ]
+    key_url = 'https://weibo.cn/search/mblog?hideSearchFrame=&keyword=%s&page=%s'
 
     def __init__(self):
         self.sso_login_url = 'https://passport.weibo.cn/sso/login'
@@ -70,6 +71,29 @@ class KeyWordsSpider(scrapy.Spider):
                 },
                 meta={'tag': key},
                 headers=self.header,
+                callback=self.generate_url
+            )
+
+    def generate_url(self, response):
+        if not response.body:
+            return
+        tag = response.meta['tag']
+        if tag:
+            keys = tag.split(' ')
+            word = '+'.join(keys)
+
+        selector = Selector(response)
+        if len(selector.xpath('//div[@class="pa"]')) > 0:
+            weibo_page_text = selector.xpath('//div[@class="pa"]/form[1]/div[1]/text()').extract()[-1]
+            weibo_page_account = int(re.findall('/([0-9]+)页', weibo_page_text)[0])
+        else:
+            weibo_page_account = 1
+        for weibo_page in range(1, weibo_page_account + 1):
+            url = KeyWordsSpider.key_url % (word, str(weibo_page))
+            yield Request(
+                url=url,
+                meta={'tag': tag},
+                headers=self.header,
                 callback=self.parse_weibo
             )
 
@@ -79,7 +103,6 @@ class KeyWordsSpider(scrapy.Spider):
         tag = response.meta['tag']
         selector = Selector(response)
         weibos = selector.css('div.c')
-
         if len(weibos) > 0:
             for weibo in weibos:
                 if len(weibo.xpath('./@id')) > 0:
@@ -114,50 +137,31 @@ class KeyWordsSpider(scrapy.Spider):
                         if comment_number.isdigit():
                             num_of_cpage = int(int(comment_number) / 10) + 1
                         else:
-                            num_of_cpage = 0
+                            num_of_cpage = 1
                         trans_number = weibo_item['support_number']
                         if comment_number.isdigit():
                             num_of_tpage = int(int(trans_number) / 10) + 1
                         else:
-                            num_of_tpage = 0
-                        yield Request(
-                            url=comment_href,
-                            meta={'tag': tag, 'content': weibo_item['content'], 'page': num_of_cpage, 'date': weibo_item['date']},
-                            headers=self.header,
-                            callback=self.parse_comment
-                        )
-                        yield Request(
-                            url=trans_href,
-                            meta={'tag': tag, 'content': weibo_item['content'], 'page': num_of_tpage, 'date': weibo_item['date']},
-                            headers=self.header,
-                            callback=self.parse_trans
-                        )
-        try:
-            page = selector.css('div.pa')[0]
-            a_list = page.xpath('./form[1]/div[1]/a')
-            for a in a_list:
-                if u'下页' in a.xpath('./text()').extract()[0]:
-                    href = 'https://weibo.cn' + a.xpath('./@href').extract()[0]
-                    yield scrapy.Request(
-                        url=href,
-                        meta={'tag': tag},
-                        headers=self.header,
-                        callback=self.parse_weibo
-                    )
-        except Exception as e:
-            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
-            log_err(e, info)
+                            num_of_tpage = 1
+
+                        for page_number in range(1, num_of_cpage + 1):
+                            yield Request(
+                                url=comment_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
+                                meta={'tag': tag, 'content': weibo_item['content'], 'date': weibo_item['date']},
+                                headers=self.header,
+                                callback=self.parse_comment
+                            )
+                        for page_number in range(1, num_of_tpage + 1):
+                            yield Request(
+                                url=trans_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
+                                meta={'tag': tag, 'content': weibo_item['content'], 'date': weibo_item['date']},
+                                headers=self.header,
+                                callback=self.parse_trans
+                            )
 
     def parse_comment(self, response):
         if not response.body:
             return
-        try:
-            current_page_no = int(re.findall('page=([0-9]+)', response.url)[0])
-        except Exception as e:
-            current_page_no = 1
-            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
-            log_err(e, info)
-        num_of_page = response.meta['page']
         weibo_content = response.meta['content']
         weibo_date = response.meta['date']
         observer_item = CommentItem()
@@ -168,49 +172,28 @@ class KeyWordsSpider(scrapy.Spider):
         comment_records = selector.xpath('//div[@class="c"]')
 
         for comment_record in comment_records[3:-1]:
-            try:
-                observer_item['user'] = comment_record.xpath('./a[1]/text()').extract()[0]
-            except Exception as e:
-                info = __file__ + ' line:' + str(sys._getframe().f_lineno)
-                log_err(e, info)
-                continue
-            if u"查看更多热门" in observer_item['user']:
-                continue
-            try:
-                observer_item['content'] = re.findall('<span class="ctt">(.+)</span>', comment_record.xpath('./span[@class="ctt"]').extract()[0])[0]
-            except Exception as e:
-                observer_item['content'] = ''
-                info = __file__ + ' line:' + str(sys._getframe().f_lineno)
-                log_err(e, info)
-            user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
-            observer_item['user_url'] = user_url
-            yield observer_item
-        try:
-            if selector.xpath('//div[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
-                next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
+            if comment_record:
                 try:
-                    yield Request(next_href, meta=response.meta, callback=self.parse_comment)
+                    observer_item['user'] = comment_record.xpath('./a[1]/text()').extract()[0]
                 except Exception as e:
                     info = __file__ + ' line:' + str(sys._getframe().f_lineno)
                     log_err(e, info)
-        except Exception as e:
-            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
-            log_err(e, info)
-            if current_page_no >= num_of_page:
-                return
-            next_page = re.findall('(https.+&page=)', response.url)[0] + str(current_page_no + 2)
-            yield Request(next_page, meta=response.meta, callback=self.parse_comment)
+                    continue
+                if u"查看更多热门" in observer_item['user']:
+                    continue
+                try:
+                    observer_item['content'] = re.findall('<span class="ctt">(.+)</span>', comment_record.xpath('./span[@class="ctt"]').extract()[0])[0]
+                except Exception as e:
+                    observer_item['content'] = ''
+                    info = __file__ + ' line:' + str(sys._getframe().f_lineno)
+                    log_err(e, info)
+                user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
+                observer_item['user_url'] = user_url
+                yield observer_item
 
     def parse_trans(self, response):
         if not response.body:
             return
-        try:
-            current_page_no = int(re.findall('page=([0-9]+)', response.url)[0])
-        except Exception as e:
-            current_page_no = 1
-            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
-            log_err(e, info)
-        num_of_page = response.meta['page']
         meta = response.meta
         selector = Selector(response)
         cs = selector.css('div.c')
@@ -226,54 +209,37 @@ class KeyWordsSpider(scrapy.Spider):
                 trans_item['support_number'] = re.findall('([0-9]+)', c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
                 trans_item['tag'] = meta['tag']
                 yield trans_item
-        try:
-            if selector.xpath('//div[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
-                next_href = 'https://weibo.cn' + selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
-                try:
-                    yield Request(next_href, meta=response.meta, callback=self.parse_trans)
-                except Exception as e:
-                    info = __file__ + ' line:' + str(sys._getframe().f_lineno)
-                    log_err(e, info)
-        except Exception as e:
-            info = __file__ + ' line:' + str(sys._getframe().f_lineno)
-            log_err(e, info)
-            if current_page_no >= num_of_page:
-                return
-            print(response.url)
-            next_page = re.findall('(https.+&page=)', response.url)[0] + str(current_page_no + 2)
-            yield Request(next_page, meta=response.meta, callback=self.parse_trans)
 
-    def filter_weibo(self, response):
-        if not response.body:
-            return
-        tag = response.meta['tag'] + '_' + 'Trans'
-        content = response.meta['content']
-        selector = Selector(response)
-        weibos = selector.css('div.c')
-        flag = 0
-        if len(weibos) > 0:
-            for weibo in weibos:
-                if len(weibo.xpath('./@id')) > 0:
-                    if content in weibo.extract():
-                        divs = weibo.xpath('./div')
-                        weibo_item = WeiboItem()
-                        weibo_item['user_url'] = divs[1].xpath('./a[1]/@href').extract()[0]
-                        weibo_item['content'] = content
-                        for a in divs[-1].xpath('./a'):
-                            if len(a.xpath('./text()').extract()) < 1:
-                                continue
-                            if u'赞' in a.xpath('./text()').extract()[0]:
-                                weibo_item['support_number'] = a.xpath('./text()').extract()[0]
-                            if u'转发' in a.xpath('./text()').extract()[0]:
-                                weibo_item['transpond_number'] = a.xpath('./text()').extract()[0]
-                            if u'评论' in a.xpath('./text()').extract()[0]:
-                                weibo_item['comment_number'] = a.xpath('./text()').extract()[0]
-                        weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
-                        weibo_item['tag'] = tag
-                        flag = 1
-                        print(weibo_item)
-                        break
-        if flag == 0:
-            if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
-                next_href = selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
-                yield Request('https://weibo.cn' + next_href, meta=response.meta, callback=self.filter_weibo)
+    # def filter_weibo(self, response):
+    #     if not response.body:
+    #         return
+    #     tag = response.meta['tag'] + '_' + 'Trans'
+    #     content = response.meta['content']
+    #     selector = Selector(response)
+    #     weibos = selector.css('div.c')
+    #     flag = 0
+    #     if len(weibos) > 0:
+    #         for weibo in weibos:
+    #             if len(weibo.xpath('./@id')) > 0:
+    #                 if content in weibo.extract():
+    #                     divs = weibo.xpath('./div')
+    #                     weibo_item = WeiboItem()
+    #                     weibo_item['user_url'] = divs[1].xpath('./a[1]/@href').extract()[0]
+    #                     weibo_item['content'] = content
+    #                     for a in divs[-1].xpath('./a'):
+    #                         if len(a.xpath('./text()').extract()) < 1:
+    #                             continue
+    #                         if u'赞' in a.xpath('./text()').extract()[0]:
+    #                             weibo_item['support_number'] = a.xpath('./text()').extract()[0]
+    #                         if u'转发' in a.xpath('./text()').extract()[0]:
+    #                             weibo_item['transpond_number'] = a.xpath('./text()').extract()[0]
+    #                         if u'评论' in a.xpath('./text()').extract()[0]:
+    #                             weibo_item['comment_number'] = a.xpath('./text()').extract()[0]
+    #                     weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
+    #                     weibo_item['tag'] = tag
+    #                     flag = 1
+    #                     break
+    #     if flag == 0:
+    #         if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
+    #             next_href = selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
+    #             yield Request('https://weibo.cn' + next_href, meta=response.meta, callback=self.filter_weibo)
