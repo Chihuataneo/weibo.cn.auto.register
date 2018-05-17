@@ -150,7 +150,7 @@ class KeyWordsSpider(scrapy.Spider):
         try:
             current_page_no = int(re.findall('page=([0-9]+)', response.url)[0])
         except:
-            pass
+            current_page_no = 1
         num_of_page = response.meta['page']
         observer_item = CommentItem()
         selector = Selector(response)
@@ -197,7 +197,7 @@ class KeyWordsSpider(scrapy.Spider):
         try:
             current_page_no = int(re.findall('page=([0-9]+)', response.url)[0])
         except:
-            pass
+            current_page_no = 1
         num_of_page = response.meta['page']
         meta = response.meta
         selector = Selector(response)
