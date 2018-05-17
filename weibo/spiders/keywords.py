@@ -6,7 +6,8 @@ class KeyWordsSpider(scrapy.Spider):
     name = 'key'
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.KeywordsPipeline': 300}}
     tags = [
-        'streetLA',
+        '斯凯奇 板鞋',
+        # 'PUMA 板鞋',
     ]
 
     def __init__(self):
@@ -100,6 +101,10 @@ class KeyWordsSpider(scrapy.Spider):
                                 weibo_item['comment_number'] = re.findall('([0-9]+)', a.xpath('./text()').extract()[0])[0]
                                 comment_href = a.xpath('./@href').extract()[0]
                         weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
+                        if isCorrectTime(weibo_item['date']) == TOO_FORWARD_NEWS:
+                            continue
+                        elif (isCorrectTime(weibo_item['date']) == TOO_LATE_NEWS) and (u'置顶' not in weibo.extract()):
+                            return
                         weibo_item['tag'] = tag
                         yield weibo_item
                         comment_number = weibo_item['comment_number']
