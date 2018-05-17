@@ -6,8 +6,7 @@ class KeyWordsSpider(scrapy.Spider):
     name = 'key'
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.KeywordsPipeline': 300}}
     tags = [
-        '斯凯奇 板鞋',
-        # 'PUMA 板鞋',
+        'PUMA 板鞋',
     ]
 
     def __init__(self):
@@ -105,7 +104,7 @@ class KeyWordsSpider(scrapy.Spider):
                         weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
                         if isCorrectTime(weibo_item['date']) == TOO_FORWARD_NEWS:
                             continue
-                        elif (isCorrectTime(weibo_item['date']) == TOO_LATE_NEWS) and (u'上页' not in selector.css('div.pa')[0].extract()):
+                        elif (isCorrectTime(weibo_item['date']) == TOO_LATE_NEWS) and (u'上页' in selector.css('div.pa')[0].extract()):
                             return
                         weibo_item['tag'] = tag
                         yield weibo_item
@@ -169,6 +168,7 @@ class KeyWordsSpider(scrapy.Spider):
             except Exception as e:
                 with open('error.log', 'a+') as f:
                     f.write(str(e) + '\n')
+                    f.write('line: 168' + '\n')
                 continue
             if u"查看更多热门" in observer_item['user']:
                 continue
@@ -178,6 +178,7 @@ class KeyWordsSpider(scrapy.Spider):
                 observer_item['content'] = ''
                 with open('error.log', 'a+') as f:
                     f.write(str(e) + '\n')
+                    f.write('line: 179' + '\n')
             user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
             observer_item['user_url'] = user_url
             yield observer_item
@@ -189,6 +190,7 @@ class KeyWordsSpider(scrapy.Spider):
                 except Exception as e:
                     with open('error.log', 'a+') as f:
                         f.write(str(e) + '\n')
+                        f.write('line: 192' + '\n')
         except Exception as e:
             if current_page_no >= num_of_page:
                 return
@@ -226,9 +228,11 @@ class KeyWordsSpider(scrapy.Spider):
                 except Exception as e:
                     with open('error.log', 'a+') as f:
                         f.write(str(e) + '\n')
+                        f.write('line: 228' + '\n')
         except Exception as e:
             if current_page_no >= num_of_page:
                 return
+            print(response.url)
             next_page = re.findall('(https.+&page=)', response.url)[0] + str(current_page_no + 2)
             yield Request(next_page, meta=response.meta, callback=self.parse_trans)
 
