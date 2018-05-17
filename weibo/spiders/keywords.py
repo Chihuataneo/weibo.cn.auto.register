@@ -119,13 +119,13 @@ class KeyWordsSpider(scrapy.Spider):
                             num_of_tpage = 0
                         yield Request(
                             url=comment_href,
-                            meta={'tag': tag, 'content': weibo_item['content'], 'page': num_of_cpage},
+                            meta={'tag': tag, 'content': weibo_item['content'], 'page': num_of_cpage, 'date': weibo_item['date']},
                             headers=self.header,
                             callback=self.parse_comment
                         )
                         yield Request(
                             url=trans_href,
-                            meta={'tag': tag, 'content': weibo_item['content'], 'page': num_of_tpage},
+                            meta={'tag': tag, 'content': weibo_item['content'], 'page': num_of_tpage, 'date': weibo_item['date']},
                             headers=self.header,
                             callback=self.parse_trans
                         )
@@ -152,10 +152,12 @@ class KeyWordsSpider(scrapy.Spider):
         except:
             current_page_no = 1
         num_of_page = response.meta['page']
+        weibo_content = response.meta['content']
+        weibo_date = response.meta['date']
         observer_item = CommentItem()
         selector = Selector(response)
-        weibo_content = response.meta['content']
         observer_item['weibo_content'] = weibo_content
+        observer_item['weibo_date'] = weibo_date
         observer_item['tag'] = response.meta['tag']
         comment_records = selector.xpath('//div[@class="c"]')
 
@@ -210,6 +212,7 @@ class KeyWordsSpider(scrapy.Spider):
                 trans_item['user_url'] = user_href
                 trans_item['content'] = c.xpath('./text()').extract()[0]
                 trans_item['weibo_content'] = meta['content']
+                trans_item['weibo_date'] = meta['date']
                 trans_item['support_number'] = re.findall('([0-9]+)', c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
                 trans_item['tag'] = meta['tag']
                 yield trans_item

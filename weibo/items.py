@@ -23,6 +23,7 @@ class CommentItem(scrapy.Item):
     user_url = scrapy.Field()
     content = scrapy.Field()
     weibo_content = scrapy.Field()
+    weibo_date = scrapy.Field()
     tag = scrapy.Field()
 
 
@@ -31,6 +32,7 @@ class TransItem(scrapy.Item):
     user_url = scrapy.Field()
     content = scrapy.Field()
     weibo_content = scrapy.Field()
+    weibo_date = scrapy.Field()
     support_number = scrapy.Field()
     tag = scrapy.Field()
 
