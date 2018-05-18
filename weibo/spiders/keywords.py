@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from weibo.common import *
-from weibo.items import WeiboItem, CommentItem, TransItem
+from weibo.items import WeiboItem, CommentItem, TransItem, SecLevelWeiboItem
 
 class KeyWordsSpider(scrapy.Spider):
     name = 'key'
+    WriteSwitch = False
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.KeywordsPipeline': 300}}
     tags = [
         'streetLA',
@@ -21,6 +22,7 @@ class KeyWordsSpider(scrapy.Spider):
             'Referer': 'https://passport.weibo.cn/signin/login?entry=mweibo&r=http%3A%2F%2Fm.weibo.cn'
         }
         self.ids = []
+        self.zombie_fans = []
 
     def start_requests(self):
         return [
@@ -30,10 +32,8 @@ class KeyWordsSpider(scrapy.Spider):
                 method="POST",
                 formdata={
                     # **********input your login info***********
-                    # "username": "weibopachong@sina.com",
-                    # "password": "weiboceshi",
-                    "username": "13962775359",
-                    "password": "wanghang1990",
+                    "username": "weibopachong@sina.com",
+                    "password": "weiboceshi",
                     # ******************************************
                     "savestate": "1",
                     "r": "http://m.weibo.cn",
@@ -52,16 +52,17 @@ class KeyWordsSpider(scrapy.Spider):
 
     def verify(self, response):
         body = json.loads(response.body)
-        passport_url = body['data']['crossdomainlist']['weibo.cn']
+        self.passport_url_cn = body['data']['crossdomainlist']['weibo.cn']
+        self.passport_url_com = body['data']['crossdomainlist']['weibo.com']
         yield scrapy.Request(
-            passport_url,
+            self.passport_url_cn,
             headers=self.header,
             callback=self.search_key
         )
 
     def search_key(self, response):
         for key in self.tags:
-            yield scrapy.FormRequest(
+            yield FormRequest(
                 url='https://weibo.cn/search/',
                 method='POST',
                 formdata=
@@ -71,10 +72,10 @@ class KeyWordsSpider(scrapy.Spider):
                 },
                 meta={'tag': key},
                 headers=self.header,
-                callback=self.generate_url
+                callback=self.parse
             )
 
-    def generate_url(self, response):
+    def parse(self, response):
         if not response.body:
             return
         tag = response.meta['tag']
@@ -110,7 +111,13 @@ class KeyWordsSpider(scrapy.Spider):
                         self.ids.append(id)
                         weibo_item = WeiboItem()
                         weibo_item['user_url'] = weibo.xpath('./div[1]/a[1]/@href').extract()[0]
-                        weibo_item['content'] = weibo.xpath('./div[1]/span[@class="ctt"]').extract()[0]
+                        weibo_item['content'] = re.findall('<span class="ctt">:(.+)</span>', weibo.xpath('./div[1]/span[@class="ctt"]').extract()[0])[0]
+                        # 通过搜索连续汉字字符串，确定微博关键字
+                        weibo_keys = ''.join(weibo.xpath('./div[1]/span[@class="ctt"]/text()').extract())
+                        if len(re.findall('([\u4e00-\u9fa5]+)', weibo_keys)) > 0:
+                            weibo_keys = re.findall('([\u4e00-\u9fa5]+)', weibo_keys)[0]
+                        else:
+                            weibo_keys = ''
                         divs = weibo.xpath('./div')
                         comment_href = ''
                         trans_href = ''
@@ -131,7 +138,8 @@ class KeyWordsSpider(scrapy.Spider):
                         elif (isCorrectTime(weibo_item['date']) == TOO_LATE_NEWS) and (u'上页' in selector.css('div.pa')[0].extract()):
                             return
                         weibo_item['tag'] = tag
-                        yield weibo_item
+                        if KeyWordsSpider.WriteSwitch:
+                            yield weibo_item
                         comment_number = weibo_item['comment_number']
                         if comment_number.isdigit():
                             num_of_cpage = int(int(comment_number) / 10) + 1
@@ -142,7 +150,6 @@ class KeyWordsSpider(scrapy.Spider):
                             num_of_tpage = int(int(trans_number) / 10) + 1
                         else:
                             num_of_tpage = 1
-
                         for page_number in range(1, num_of_cpage + 1):
                             yield Request(
                                 url=comment_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
@@ -153,7 +160,8 @@ class KeyWordsSpider(scrapy.Spider):
                         for page_number in range(1, num_of_tpage + 1):
                             yield Request(
                                 url=trans_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
-                                meta={'tag': tag, 'content': weibo_item['content'], 'date': weibo_item['date']},
+                                meta={'tag': tag, 'content': weibo_item['content'],
+                                      'date': weibo_item['date'], 'weibo_keys': weibo_keys},
                                 headers=self.header,
                                 callback=self.parse_trans
                             )
@@ -188,7 +196,8 @@ class KeyWordsSpider(scrapy.Spider):
                     log_err(e, info)
                 user_url = 'https://weibo.cn' + comment_record.xpath('./a[1]/@href').extract()[0]
                 observer_item['user_url'] = user_url
-                yield observer_item
+                if KeyWordsSpider.WriteSwitch:
+                    yield observer_item
 
     def parse_trans(self, response):
         if not response.body:
@@ -199,46 +208,116 @@ class KeyWordsSpider(scrapy.Spider):
         for c in cs:
             if len(c.xpath('./span[@class="cc"]')) and len(c.xpath('./span[@class="ct"]')):
                 trans_item = TransItem()
-                user_href = 'https://weibo.cn' + c.xpath('./a[1]/@href').extract()[0]
+                user_href_cn = 'https://weibo.cn' + c.xpath('./a[1]/@href').extract()[0]
                 trans_item['user'] = c.xpath('./a[1]/text()').extract()[0]
-                trans_item['user_url'] = user_href
-                trans_item['content'] = c.xpath('./text()').extract()[0]
+                trans_item['user_url'] = user_href_cn
+                trans_item['content'] = c.xpath('./text()').extract()
+                comment_keys = ''.join(trans_item['content'])
+                if len(re.findall('([\u4e00-\u9fa5]+)', comment_keys)) > 0:
+                    comment_keys = re.findall('([\u4e00-\u9fa5]+)', comment_keys)[0]
+                else:
+                    comment_keys = u'转发微博'
+                meta['comment_keys'] = comment_keys
                 trans_item['weibo_content'] = meta['content']
                 trans_item['weibo_date'] = meta['date']
                 trans_item['support_number'] = re.findall('([0-9]+)', c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
                 trans_item['tag'] = meta['tag']
-                yield trans_item
+                if KeyWordsSpider.WriteSwitch:
+                    yield trans_item
+                # parse next trans
+                user_com_href = 'https://weibo.com' + c.xpath('./a[1]/@href').extract()[0]
+                if user_com_href not in self.zombie_fans:
+                    meta['user_com_href'] = user_com_href
+                    yield Request(
+                        url=self.passport_url_com,
+                        meta=meta,
+                        headers=self.header,
+                        callback=self.get_com_user_page
+                    )
 
-    # def filter_weibo(self, response):
-    #     if not response.body:
-    #         return
-    #     tag = response.meta['tag'] + '_' + 'Trans'
-    #     content = response.meta['content']
-    #     selector = Selector(response)
-    #     weibos = selector.css('div.c')
-    #     flag = 0
-    #     if len(weibos) > 0:
-    #         for weibo in weibos:
-    #             if len(weibo.xpath('./@id')) > 0:
-    #                 if content in weibo.extract():
-    #                     divs = weibo.xpath('./div')
-    #                     weibo_item = WeiboItem()
-    #                     weibo_item['user_url'] = divs[1].xpath('./a[1]/@href').extract()[0]
-    #                     weibo_item['content'] = content
-    #                     for a in divs[-1].xpath('./a'):
-    #                         if len(a.xpath('./text()').extract()) < 1:
-    #                             continue
-    #                         if u'赞' in a.xpath('./text()').extract()[0]:
-    #                             weibo_item['support_number'] = a.xpath('./text()').extract()[0]
-    #                         if u'转发' in a.xpath('./text()').extract()[0]:
-    #                             weibo_item['transpond_number'] = a.xpath('./text()').extract()[0]
-    #                         if u'评论' in a.xpath('./text()').extract()[0]:
-    #                             weibo_item['comment_number'] = a.xpath('./text()').extract()[0]
-    #                     weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
-    #                     weibo_item['tag'] = tag
-    #                     flag = 1
-    #                     break
-    #     if flag == 0:
-    #         if selector.xpath('//*[@id="pagelist"]/form/div/a/text()').extract()[0] == u'下页':
-    #             next_href = selector.xpath('//*[@id="pagelist"]/form/div/a/@href').extract()[0]
-    #             yield Request('https://weibo.cn' + next_href, meta=response.meta, callback=self.filter_weibo)
+    def get_com_user_page(self, response):
+        yield Request(
+            url=response.meta['user_com_href'],
+            meta=response.meta,
+            headers=self.header,
+            callback=self.get_div_id
+        )
+
+    def get_div_id(self, response):
+        div_id = re.search('(Pl_Official_MyProfileFeed__[0-9]+)', response.body.decode()).group()
+        if response.meta['weibo_keys'] == '' and response.meta['comment_keys'] == u'转发微博':
+            return
+        if response.meta['comment_keys'] == u'转发微博':
+            keys = response.meta['weibo_keys']
+        else:
+            keys = response.meta['comment_keys']
+        yield FormRequest(
+            url=response.meta['user_com_href'],
+            method='GET',
+            formdata=
+            {
+                'pids': div_id,
+                'profile_ftype': '1',
+                'is_all': '1',
+                'is_search': '1',
+                'key_word': keys,
+                'ajaxpagelet': '1',
+                'ajaxpagelet_v6': '1',
+                '__ref': '/%s?profile_ftype=1&is_all=1#_0' %
+                         re.findall('https://weibo.com/(.+)', response.meta['user_com_href'])[0],
+                '_t': str(time.time()).replace('.', '')
+            },
+            meta=response.meta,
+            headers=self.header,
+            callback=self.parse_next_trans
+        )
+
+    def parse_next_trans(self, response):
+        if not response.body:
+            return
+        body = response.body.decode()
+        if u'找不到符合条件的微博，返回' in body:
+            return
+        else:
+            body = re.findall('<script>parent.FM.view\((.+)\)</script>', body)[0]
+            json_body = json.loads(body)['html']
+            virtual_response = scrapy.http.TextResponse(url='', body=json_body.encode())
+            selector = Selector(virtual_response)
+            total = int(selector.css('div.WB_cardwrap.WB_result.S_bg1').css('span.S_txt2').xpath('./em[1]/text()').extract()[0])
+
+            if total > ZOBIE_FAN_CRITICAL_VALUE:
+                self.zombie_fans.append(response.meta['user_com_href'])
+                return
+            else:
+                slweibo_item = SecLevelWeiboItem()
+                wbs = selector.css('div.WB_cardwrap.WB_feed_type.S_bg2.WB_feed_vipcover.WB_feed_like')
+                target_divs = wbs[0].xpath('//div[@class="WB_feed_handle"]')
+                if len(target_divs) > 0:
+                    target_div = target_divs[0]
+                    trans_info = target_div.xpath('./div[1]/ul[1]/li[2]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    comment_info = target_div.xpath('./div[1]/ul[1]/li[3]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    support_info = target_div.xpath('./div[1]/ul[1]/li[4]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    if u'转发' in trans_info:
+                        trans_num = 0
+                    else:
+                        trans_num = trans_info
+                    if u'评论' in comment_info:
+                        comment_num = 0
+                    else:
+                        comment_num = comment_info
+                    if u'赞' in support_info:
+                        support_num = 0
+                    else:
+                        support_num = support_info
+                slweibo_item['user_url'] = response.meta['user_com_href']
+                slweibo_item['content'] = response.meta['content']
+                slweibo_item['support_number'] = support_num
+                slweibo_item['transpond_number'] = trans_num
+                slweibo_item['comment_number'] = comment_num
+                # slweibo_item['date'] =
+                slweibo_item['weibo_date'] = response.meta['date']
+                slweibo_item['weibo_keys'] = response.meta['weibo_keys']
+                slweibo_item['comment_keys'] = response.meta['comment_keys']
+                slweibo_item['tag'] = response.meta['tag']
+                if KeyWordsSpider.WriteSwitch:
+                    yield slweibo_item

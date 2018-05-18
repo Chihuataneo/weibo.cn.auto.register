@@ -18,6 +18,19 @@ class WeiboItem(scrapy.Item):
     tag = scrapy.Field()
 
 
+class SecLevelWeiboItem(scrapy.Item):
+    user_url = scrapy.Field()
+    content = scrapy.Field()
+    support_number = scrapy.Field()
+    transpond_number = scrapy.Field()
+    comment_number = scrapy.Field()
+    date = scrapy.Field()
+    weibo_date = scrapy.Field()
+    weibo_keys = scrapy.Field()
+    comment_keys = scrapy.Field()
+    tag = scrapy.Field()
+
+
 class CommentItem(scrapy.Item):
     user = scrapy.Field()
     user_url = scrapy.Field()
