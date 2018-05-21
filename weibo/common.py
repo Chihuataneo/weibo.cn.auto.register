@@ -23,7 +23,9 @@ INFO_LEN = 3
 
 FILTER_WORDS = [u'成都']
 
-ZOBIE_FAN_CRITICAL_VALUE = 5
+ZOBIE_FAN_CRITICAL_VALUE = 10
+
+KEY_LEN = 10
 
 def isCorrectTime(time_para):
     try:

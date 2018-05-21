@@ -305,7 +305,10 @@ class ICSpider(scrapy.Spider):
         if response.meta['comment_keys'] == u'转发微博':
             keys = response.meta['weibo_keys']
         else:
-            keys = response.meta['comment_keys']
+            if len(response.meta['comment_keys']) > KEY_LEN:
+                keys = response.meta['comment_keys']
+            else:
+                keys = response.meta['weibo_keys']
         yield FormRequest(
             url=response.meta['user_com_href'],
             method='GET',
