@@ -12,7 +12,7 @@ from scrapy import signals
 from scrapy import Selector
 from scrapy.http import Request, FormRequest
 
-TIME_FILTER_START = 20180515
+TIME_FILTER_START = 20180518
 TIME_FILTER_END = 20180601
 
 TOO_LATE_NEWS = 0
