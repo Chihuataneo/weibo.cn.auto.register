@@ -148,6 +148,8 @@ class ICSpider(scrapy.Spider):
                         date = divs[0].xpath('./span[@class="ct"]/text()').extract()[0]
                         if isCorrectTime(date) == TOO_FORWARD_NEWS:
                             continue
+                        elif (isCorrectTime(date) == TOO_LATE_NEWS) and (u'置顶' in wb_text):
+                            continue
                         elif (isCorrectTime(date) == TOO_LATE_NEWS) and (u'置顶' not in wb_text):
                             return
                         weibo_item['date'] = date

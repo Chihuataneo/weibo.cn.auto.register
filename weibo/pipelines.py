@@ -35,7 +35,8 @@ class WeiboPipeline(object):
         return item
 
     def close_spider(self, spider):
-        self.f.close()
+        if self.f:
+            self.f.close()
 
 
 class TopicPipeline(object):
@@ -53,7 +54,8 @@ class TopicPipeline(object):
         return item
 
     def close_spider(self, spider):
-        self.f.close()
+        if self.f:
+            self.f.close()
 
 
 class KeywordsPipeline(object):
@@ -78,4 +80,5 @@ class KeywordsPipeline(object):
             self.f.write(line)
 
     def close_spider(self, spider):
-        self.f.close()
+        if self.f:
+            self.f.close()

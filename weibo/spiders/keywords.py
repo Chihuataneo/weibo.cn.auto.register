@@ -143,6 +143,9 @@ class KeyWordsSpider(scrapy.Spider):
                         weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
                         if isCorrectTime(weibo_item['date']) == TOO_FORWARD_NEWS:
                             continue
+                        elif (isCorrectTime(weibo_item['date']) == TOO_LATE_NEWS) \
+                                and (u'上页' not in selector.css('div.pa')[0].extract()):
+                            continue
                         elif (isCorrectTime(weibo_item['date']) == TOO_LATE_NEWS) and (u'上页' in selector.css('div.pa')[0].extract()):
                             return
                         weibo_item['tag'] = tag
