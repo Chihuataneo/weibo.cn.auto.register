@@ -174,16 +174,16 @@ class ICSpider(scrapy.Spider):
                             trans_href = a[-3].xpath('./@href').extract()[0]
                     yield weibo_item
 
-                    # comment_number = re.findall('([0-9]+)', weibo_item['comment_number'])[0]
-                    # if comment_number.isdigit():
-                    #     num_of_cpage = int(int(comment_number)/10) + 1
-                    # else:
-                    #     num_of_cpage = 1
-                    # for page_number in range(1, num_of_cpage + 1):
-                    #     yield Request(comment_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
-                    #                   meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag'],
-                    #                         'date': weibo_item['date']},
-                    #                   callback=self.parse_comment)
+                    comment_number = re.findall('([0-9]+)', weibo_item['comment_number'])[0]
+                    if comment_number.isdigit():
+                        num_of_cpage = int(int(comment_number)/10) + 1
+                    else:
+                        num_of_cpage = 1
+                    for page_number in range(1, num_of_cpage + 1):
+                        yield Request(comment_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
+                                      meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag'],
+                                            'date': weibo_item['date']},
+                                      callback=self.parse_comment)
 
                     trans_number = re.findall('([0-9]+)', weibo_item['transpond_number'])[0]
                     if trans_number.isdigit():
