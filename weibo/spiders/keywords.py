@@ -103,7 +103,7 @@ class KeyWordsSpider(scrapy.Spider):
                 headers=self.header,
                 callback=self.parse_weibo
             )
-            break
+
 
     def parse_weibo(self, response):
         if not response.body:
@@ -173,7 +173,7 @@ class KeyWordsSpider(scrapy.Spider):
                                 headers=self.header,
                                 callback=self.parse_trans
                             )
-                        break
+
 
     def parse_comment(self, response):
         if not response.body:
