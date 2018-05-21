@@ -77,7 +77,7 @@ class KeyWordsSpider(scrapy.Spider):
                     'keyword': key,
                     'smblog': u'搜微博'
                 },
-                meta={'tag': key},
+                meta={'tag': 'key_' + key},
                 headers=self.header,
                 callback=self.parse
             )

@@ -118,7 +118,7 @@ class ICSpider(scrapy.Spider):
         wbs = selector.xpath("//div[@class='c']")
         weibo_item = WeiboItem()
         weibo_item['user_url'] = response.url
-        weibo_item['tag'] = ICSpider.tags[index]
+        weibo_item['tag'] = 'ic_' + ICSpider.tags[index]
 
         if len(wbs) > 0:
             for wb in wbs:

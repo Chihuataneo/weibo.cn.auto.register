@@ -6,6 +6,7 @@
 # See: https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
 from weibo.items import *
+from weibo.common import *
 
 
 class WeiboPipeline(object):
@@ -13,19 +14,19 @@ class WeiboPipeline(object):
         tag = item['tag']
 
         if isinstance(item, WeiboItem):
-            self.f = open('result/' + tag + '_weibo_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/1st_weibo/' + tag + '_weibo_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, FanItem):
-            self.f = open('result/' + tag + '_fans_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/1st_weibo/' + tag + '_fans_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, CommentItem):
-            self.f = open('result/' + tag + '_comment_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/1st_weibo/' + tag + '_comment_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, TransItem):
-            self.f = open('result/' + tag + '_trans_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/1st_weibo/' + tag + '_trans_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, SecLevelWeiboItem):
@@ -44,11 +45,11 @@ class TopicPipeline(object):
         tag = item['tag']
 
         if isinstance(item, TopicItem):
-            self.f = open('result/' + tag + '_topic_info.txt', 'a+', encoding='utf-8')
+            self.f = open('result/1st_weibo/' + tag + '_topic_info.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, WeiboItem):
-            self.f = open('result/' + tag + '_topic_weibo_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/1st_weibo/' + tag + '_topic_weibo_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         return item
@@ -63,15 +64,15 @@ class KeywordsPipeline(object):
         tag = item['tag']
 
         if isinstance(item, WeiboItem):
-            self.f = open('result/' + tag + '_weibo_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/1st_weibo/' + tag + '_weibo_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, CommentItem):
-            self.f = open('result/' + tag + '_comment_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/1st_weibo/' + tag + '_comment_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, TransItem):
-            self.f = open('result/' + tag + '_trans_result.txt', 'a+', encoding='utf-8')
+            self.f = open('result/1st_weibo/' + tag + '_trans_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
         elif isinstance(item, SecLevelWeiboItem):

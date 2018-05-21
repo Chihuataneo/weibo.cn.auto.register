@@ -15,8 +15,8 @@ class TopicSpider(scrapy.Spider):
     def __init__(self):
         self.sso_login_url = 'https://passport.weibo.cn/sso/login'
         self.tags = [
-            'battle',
-            'lj'
+            'topic_battle',
+            'topic_lj'
         ]
         # 回复时间排序url
         self.topic_url_list_by_reply_time = [
