@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from weibo.common import *
-from weibo.items import WeiboItem, CommentItem, FanItem, TransItem
+from weibo.items import WeiboItem, CommentItem, FanItem, TransItem, SecLevelWeiboItem
 
 class ICSpider(scrapy.Spider):
     name = 'ic'
+    WriteSwitch = True
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.WeiboPipeline': 300}}
     tags = [
         '高靓Tina',
@@ -29,6 +30,7 @@ class ICSpider(scrapy.Spider):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.104 Safari/537.36 Core/1.53.4843.400 QQBrowser/9.7.13021.400',
             'Referer': 'https://passport.weibo.cn/signin/login?entry=mweibo&r=http%3A%2F%2Fm.weibo.cn'
         }
+        self.zombie_fans = []
 
     def start_requests(self):
         return [
@@ -58,9 +60,10 @@ class ICSpider(scrapy.Spider):
 
     def verify(self, response):
         body = json.loads(response.body)
-        passport_url = body['data']['crossdomainlist']['weibo.cn']
+        self.passport_url_cn = body['data']['crossdomainlist']['weibo.cn']
+        self.passport_url_com = body['data']['crossdomainlist']['weibo.com']
         yield scrapy.Request(
-            passport_url,
+            self.passport_url_cn,
             headers=self.header,
             callback=self.login
         )
@@ -71,10 +74,10 @@ class ICSpider(scrapy.Spider):
                 weibo_url,
                 meta={'index': index},
                 headers=self.header,
-                callback=self.generate_url
+                callback=self.parse
             )
 
-    def generate_url(self, response):
+    def parse(self, response):
         if not response.body:
             return
         star_url = response.url
@@ -119,6 +122,13 @@ class ICSpider(scrapy.Spider):
                     divs = wb.xpath('./div')
                     weibo_item['content'] = re.findall('<span class="ctt">(.+)</span>',
                                                        divs[0].xpath('./span[@class="ctt"]').extract()[0])[0]
+                    # 通过搜索连续汉字字符串，确定微博关键字
+                    weibo_keys = ''.join(wb.xpath('./div[1]/span[@class="ctt"]/text()').extract())
+                    if len(re.findall('([\u4e00-\u9fa5]+)', weibo_keys)) > 0:
+                        weibo_keys = re.findall('([\u4e00-\u9fa5]+)', weibo_keys)[0]
+                    else:
+                        weibo_keys = ''
+
                     for key in FILTER_WORDS:
                         if key in weibo_item['content']:
                             flag = 1
@@ -168,12 +178,13 @@ class ICSpider(scrapy.Spider):
 
                     trans_number = re.findall('([0-9]+)', weibo_item['transpond_number'])[0]
                     if trans_number.isdigit():
-                        num_of_tpage = int(int(comment_number) / 10) + 1
+                        num_of_tpage = int(int(trans_number) / 10) + 1
                     else:
                         num_of_tpage = 1
                     for page_number in range(1, num_of_tpage + 1):
                         yield Request(trans_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
-                                      meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag'], 'date': weibo_item['date']},
+                                      meta={'tag': weibo_item['tag'], 'content': weibo_item['content'],
+                                      'date': weibo_item['date'], 'weibo_keys': weibo_keys},
                                       callback=self.parse_trans)
 
         if next_page <= weibo_page_account:
@@ -216,27 +227,6 @@ class ICSpider(scrapy.Spider):
             yield Request(user_url, meta={'url': user_url, 'weibo': weibo_content, 'tag': observer_item['tag']},
                           callback=self.parse_user)
 
-    def parse_trans(self, response):
-        if not response.body:
-            return
-        meta = response.meta
-        selector = Selector(response)
-        cs = selector.css('div.c')
-        for c in cs:
-            if len(c.xpath('./span[@class="cc"]')) and len(c.xpath('./span[@class="ct"]')):
-                trans_item = TransItem()
-                user_href = 'https://weibo.cn' + c.xpath('./a[1]/@href').extract()[0]
-                trans_item['user'] = c.xpath('./a[1]/text()').extract()[0]
-                trans_item['user_url'] = user_href
-                trans_item['content'] = c.xpath('./text()').extract()[0]
-                trans_item['weibo_content'] = meta['weibo']
-                trans_item['weibo_date'] = meta['date']
-                trans_item['support_number'] = re.findall('([0-9]+)', c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
-                trans_item['tag'] = meta['tag']
-                yield trans_item
-                yield Request(user_href, meta={'url': user_href, 'weibo': meta['content'], 'tag': meta['tag']},
-                              callback=self.parse_user)
-
     def parse_user(self, response):
         user_item = FanItem()
         user_url = response.meta['url']
@@ -259,3 +249,132 @@ class ICSpider(scrapy.Spider):
         user_item['fans'] = user_info.xpath('//div[@class="tip2"]/a[2]/text()').extract()[0]
         user_item['weibo_content'] = weibo_content
         yield user_item
+
+    def parse_trans(self, response):
+        if not response.body:
+            return
+        meta = response.meta
+        selector = Selector(response)
+        cs = selector.css('div.c')
+        for c in cs:
+            if len(c.xpath('./span[@class="cc"]')) and len(c.xpath('./span[@class="ct"]')):
+                trans_item = TransItem()
+                user_href_cn = 'https://weibo.cn' + c.xpath('./a[1]/@href').extract()[0]
+                trans_item['user'] = c.xpath('./a[1]/text()').extract()[0]
+                trans_item['user_url'] = user_href_cn
+                trans_item['content'] = c.xpath('./text()').extract()
+                comment_keys = ''.join(trans_item['content'])
+                if len(re.findall('([\u4e00-\u9fa5]+)', comment_keys)) > 0:
+                    comment_keys = re.findall('([\u4e00-\u9fa5]+)', comment_keys)[0]
+                else:
+                    comment_keys = u'转发微博'
+                meta['comment_keys'] = comment_keys
+                trans_item['weibo_content'] = meta['content']
+                trans_item['weibo_date'] = meta['date']
+                trans_item['support_number'] = re.findall('([0-9]+)', c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
+                trans_item['tag'] = meta['tag']
+                if ICSpider.WriteSwitch:
+                    yield trans_item
+                # parse next trans
+                user_com_href = 'https://weibo.com' + c.xpath('./a[1]/@href').extract()[0]
+                if user_com_href not in self.zombie_fans:
+                    meta['user_com_href'] = user_com_href
+                    yield Request(
+                        url=self.passport_url_com,
+                        meta=meta,
+                        headers=self.header,
+                        callback=self.get_com_user_page
+                    )
+
+    def get_com_user_page(self, response):
+        yield Request(
+            url=response.meta['user_com_href'],
+            meta=response.meta,
+            headers=self.header,
+            callback=self.get_div_id
+        )
+
+    def get_div_id(self, response):
+        div_id = re.search('(Pl_Official_MyProfileFeed__[0-9]+)', response.body.decode()).group()
+        if response.meta['weibo_keys'] == '' and response.meta['comment_keys'] == u'转发微博':
+            return
+        if response.meta['comment_keys'] == u'转发微博':
+            keys = response.meta['weibo_keys']
+        else:
+            keys = response.meta['comment_keys']
+        yield FormRequest(
+            url=response.meta['user_com_href'],
+            method='GET',
+            formdata=
+            {
+                'pids': div_id,
+                'profile_ftype': '1',
+                'is_all': '1',
+                'is_search': '1',
+                'key_word': keys,
+                'ajaxpagelet': '1',
+                'ajaxpagelet_v6': '1',
+                '__ref': '/%s?profile_ftype=1&is_all=1#_0' %
+                         re.findall('https://weibo.com/(.+)', response.meta['user_com_href'])[0],
+                '_t': str(time.time()).replace('.', '')
+            },
+            meta=response.meta,
+            headers=self.header,
+            callback=self.parse_next_trans
+        )
+
+    def parse_next_trans(self, response):
+        if not response.body:
+            return
+        body = response.body.decode()
+        if u'找不到符合条件的微博，返回' in body:
+            return
+        else:
+            body = re.findall('<script>parent.FM.view\((.+)\)</script>', body)[0]
+            json_body = json.loads(body)['html']
+            virtual_response = scrapy.http.TextResponse(url='', body=json_body.encode())
+            selector = Selector(virtual_response)
+            total = int(selector.css('div.WB_cardwrap.WB_result.S_bg1').css('span.S_txt2').xpath('./em[1]/text()').extract()[0])
+
+            if total > ZOBIE_FAN_CRITICAL_VALUE:
+                self.zombie_fans.append(response.meta['user_com_href'])
+                return
+            else:
+                slweibo_item = SecLevelWeiboItem()
+                wbs = selector.css('div.WB_cardwrap.WB_feed_type.S_bg2.WB_feed_vipcover.WB_feed_like')
+                if not len(wbs):
+                    wbs = selector.css('div.WB_cardwrap.WB_feed_type.S_bg2.WB_feed_like')
+                if not len(wbs):
+                    return
+                date = wbs[0].css('div.WB_feed_detail.clearfix').css('div.WB_detail').css('div.WB_from.S_txt2').xpath(
+                    './a[1]/text()').extract()[0]
+                target_divs = wbs[0].xpath('//div[@class="WB_feed_handle"]')
+                if len(target_divs) > 0:
+                    target_div = target_divs[0]
+                    trans_info = target_div.xpath('./div[1]/ul[1]/li[2]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    comment_info = target_div.xpath('./div[1]/ul[1]/li[3]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    support_info = target_div.xpath('./div[1]/ul[1]/li[4]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    if u'转发' in trans_info:
+                        trans_num = 0
+                    else:
+                        trans_num = trans_info
+                    if u'评论' in comment_info:
+                        comment_num = 0
+                    else:
+                        comment_num = comment_info
+                    if u'赞' in support_info:
+                        support_num = 0
+                    else:
+                        support_num = support_info
+                slweibo_item['user_url'] = response.meta['user_com_href']
+                slweibo_item['content'] = response.meta['content']
+                slweibo_item['support_number'] = support_num
+                slweibo_item['transpond_number'] = trans_num
+                slweibo_item['comment_number'] = comment_num
+                slweibo_item['date'] = date
+                slweibo_item['weibo_date'] = response.meta['date']
+                slweibo_item['weibo_keys'] = response.meta['weibo_keys']
+                slweibo_item['comment_keys'] = response.meta['comment_keys']
+                slweibo_item['tag'] = response.meta['tag']
+                if ICSpider.WriteSwitch:
+                    yield slweibo_item

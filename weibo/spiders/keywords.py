@@ -291,6 +291,12 @@ class KeyWordsSpider(scrapy.Spider):
             else:
                 slweibo_item = SecLevelWeiboItem()
                 wbs = selector.css('div.WB_cardwrap.WB_feed_type.S_bg2.WB_feed_vipcover.WB_feed_like')
+                if not len(wbs):
+                    wbs = selector.css('div.WB_cardwrap.WB_feed_type.S_bg2.WB_feed_like')
+                if not len(wbs):
+                    return
+                date = wbs[0].css('div.WB_feed_detail.clearfix').css('div.WB_detail').css('div.WB_from.S_txt2').xpath(
+                    './a[1]/text()').extract()[0]
                 target_divs = wbs[0].xpath('//div[@class="WB_feed_handle"]')
                 if len(target_divs) > 0:
                     target_div = target_divs[0]
@@ -314,7 +320,7 @@ class KeyWordsSpider(scrapy.Spider):
                 slweibo_item['support_number'] = support_num
                 slweibo_item['transpond_number'] = trans_num
                 slweibo_item['comment_number'] = comment_num
-                # slweibo_item['date'] =
+                slweibo_item['date'] = date
                 slweibo_item['weibo_date'] = response.meta['date']
                 slweibo_item['weibo_keys'] = response.meta['weibo_keys']
                 slweibo_item['comment_keys'] = response.meta['comment_keys']

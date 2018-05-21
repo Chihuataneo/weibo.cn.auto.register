@@ -28,6 +28,10 @@ class WeiboPipeline(object):
             self.f = open('result/' + tag + '_trans_result.txt', 'a+', encoding='utf-8')
             line = json.dumps(dict(item), ensure_ascii=False) + '\n'
             self.f.write(line)
+        elif isinstance(item, SecLevelWeiboItem):
+            self.f = open('result/2nd_weibo/' + tag + '_2nd_weibo_result.txt', 'a+', encoding='utf-8')
+            line = json.dumps(dict(item), ensure_ascii=False) + '\n'
+            self.f.write(line)
         return item
 
     def close_spider(self, spider):
