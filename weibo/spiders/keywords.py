@@ -295,6 +295,8 @@ class KeyWordsSpider(scrapy.Spider):
 
             if total > ZOBIE_FAN_CRITICAL_VALUE:
                 self.zombie_fans.append(response.meta['user_com_href'])
+                with open('result/zombie_fan/key_zombie.txt', 'a+', encoding='utf-8') as f:
+                    f.write(response.meta['user_com_href'] + '\n')
                 return
             else:
                 slweibo_item = SecLevelWeiboItem()
