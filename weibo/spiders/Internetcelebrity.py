@@ -57,14 +57,21 @@ class ICSpider(scrapy.Spider):
                     "mainpageflag": "1",
                     "hff": "",
                     "hfp": ""},
-                callback=self.verify)]
+                callback=self.verify_cn)]
 
-    def verify(self, response):
+    def verify_cn(self, response):
         body = json.loads(response.body)
         self.passport_url_cn = body['data']['crossdomainlist']['weibo.cn']
         self.passport_url_com = body['data']['crossdomainlist']['weibo.com']
         yield scrapy.Request(
             self.passport_url_cn,
+            headers=self.header,
+            callback=self.verify_com
+        )
+
+    def verify_com(self, response):
+        yield scrapy.Request(
+            self.passport_url_com,
             headers=self.header,
             callback=self.login
         )
@@ -167,16 +174,16 @@ class ICSpider(scrapy.Spider):
                             trans_href = a[-3].xpath('./@href').extract()[0]
                     yield weibo_item
 
-                    comment_number = re.findall('([0-9]+)', weibo_item['comment_number'])[0]
-                    if comment_number.isdigit():
-                        num_of_cpage = int(int(comment_number)/10) + 1
-                    else:
-                        num_of_cpage = 1
-                    for page_number in range(1, num_of_cpage + 1):
-                        yield Request(comment_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
-                                      meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag'],
-                                            'date': weibo_item['date']},
-                                      callback=self.parse_comment)
+                    # comment_number = re.findall('([0-9]+)', weibo_item['comment_number'])[0]
+                    # if comment_number.isdigit():
+                    #     num_of_cpage = int(int(comment_number)/10) + 1
+                    # else:
+                    #     num_of_cpage = 1
+                    # for page_number in range(1, num_of_cpage + 1):
+                    #     yield Request(comment_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
+                    #                   meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag'],
+                    #                         'date': weibo_item['date']},
+                    #                   callback=self.parse_comment)
 
                     trans_number = re.findall('([0-9]+)', weibo_item['transpond_number'])[0]
                     if trans_number.isdigit():
@@ -285,19 +292,11 @@ class ICSpider(scrapy.Spider):
                 if user_com_href not in self.zombie_fans:
                     meta['user_com_href'] = user_com_href
                     yield Request(
-                        url=self.passport_url_com,
+                        url=user_com_href,
                         meta=meta,
                         headers=self.header,
-                        callback=self.get_com_user_page
+                        callback=self.get_div_id
                     )
-
-    def get_com_user_page(self, response):
-        yield Request(
-            url=response.meta['user_com_href'],
-            meta=response.meta,
-            headers=self.header,
-            callback=self.get_div_id
-        )
 
     def get_div_id(self, response):
         div_id = re.search('(Pl_Official_MyProfileFeed__[0-9]+)', response.body.decode()).group()
