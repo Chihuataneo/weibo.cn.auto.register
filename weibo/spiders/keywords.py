@@ -4,7 +4,7 @@ from weibo.items import WeiboItem, CommentItem, TransItem, SecLevelWeiboItem
 
 class KeyWordsSpider(scrapy.Spider):
     name = 'key'
-    WriteSwitch = False
+    WriteSwitch = True
     custom_settings = {'ITEM_PIPELINES': {'weibo.pipelines.KeywordsPipeline': 300}}
     tags = [
         'streetLA',
@@ -48,14 +48,21 @@ class KeyWordsSpider(scrapy.Spider):
                     "mainpageflag": "1",
                     "hff": "",
                     "hfp": ""},
-                callback=self.verify)]
+                callback=self.verify_cn)]
 
-    def verify(self, response):
+    def verify_cn(self, response):
         body = json.loads(response.body)
         self.passport_url_cn = body['data']['crossdomainlist']['weibo.cn']
         self.passport_url_com = body['data']['crossdomainlist']['weibo.com']
         yield scrapy.Request(
             self.passport_url_cn,
+            headers=self.header,
+            callback=self.verify_com
+        )
+
+    def verify_com(self, response):
+        yield scrapy.Request(
+            self.passport_url_com,
             headers=self.header,
             callback=self.search_key
         )
@@ -96,6 +103,7 @@ class KeyWordsSpider(scrapy.Spider):
                 headers=self.header,
                 callback=self.parse_weibo
             )
+            break
 
     def parse_weibo(self, response):
         if not response.body:
@@ -165,6 +173,7 @@ class KeyWordsSpider(scrapy.Spider):
                                 headers=self.header,
                                 callback=self.parse_trans
                             )
+                        break
 
     def parse_comment(self, response):
         if not response.body:
@@ -229,19 +238,11 @@ class KeyWordsSpider(scrapy.Spider):
                 if user_com_href not in self.zombie_fans:
                     meta['user_com_href'] = user_com_href
                     yield Request(
-                        url=self.passport_url_com,
+                        url=user_com_href,
                         meta=meta,
                         headers=self.header,
-                        callback=self.get_com_user_page
+                        callback=self.get_div_id
                     )
-
-    def get_com_user_page(self, response):
-        yield Request(
-            url=response.meta['user_com_href'],
-            meta=response.meta,
-            headers=self.header,
-            callback=self.get_div_id
-        )
 
     def get_div_id(self, response):
         div_id = re.search('(Pl_Official_MyProfileFeed__[0-9]+)', response.body.decode()).group()
