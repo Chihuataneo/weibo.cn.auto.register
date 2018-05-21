@@ -18,7 +18,8 @@ class KeyWordsSpider(scrapy.Spider):
             'Accept-Language': 'zh-CN,zh;q=0.8',
             'Accept-Encoding': 'gzip, deflate, sdch',
             'Connection': 'keep-alive',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.104 Safari/537.36 Core/1.53.4843.400 QQBrowser/9.7.13021.400',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/53.0.2785.104 Safari/537.36 Core/1.53.4843.400 QQBrowser/9.7.13021.400',
             'Referer': 'https://passport.weibo.cn/signin/login?entry=mweibo&r=http%3A%2F%2Fm.weibo.cn'
         }
         self.ids = []
@@ -72,8 +73,7 @@ class KeyWordsSpider(scrapy.Spider):
             yield FormRequest(
                 url='https://weibo.cn/search/',
                 method='POST',
-                formdata=
-                {
+                formdata={
                     'keyword': key,
                     'smblog': u'搜微博'
                 },
@@ -104,7 +104,6 @@ class KeyWordsSpider(scrapy.Spider):
                 callback=self.parse_weibo
             )
 
-
     def parse_weibo(self, response):
         if not response.body:
             return
@@ -114,9 +113,9 @@ class KeyWordsSpider(scrapy.Spider):
         if len(weibos) > 0:
             for weibo in weibos:
                 if len(weibo.xpath('./@id')) > 0:
-                    id = weibo.xpath('./@id').extract()[0]
-                    if id not in self.ids:
-                        self.ids.append(id)
+                    weibo_id = weibo.xpath('./@id').extract()[0]
+                    if weibo_id not in self.ids:
+                        self.ids.append(weibo_id)
                         weibo_item = WeiboItem()
                         weibo_item['user_url'] = weibo.xpath('./div[1]/a[1]/@href').extract()[0]
                         weibo_item['content'] = re.findall('<span class="ctt">:(.+)</span>', weibo.xpath('./div[1]/span[@class="ctt"]').extract()[0])[0]
@@ -133,12 +132,15 @@ class KeyWordsSpider(scrapy.Spider):
                             if len(a.xpath('./text()').extract()) < 1:
                                 continue
                             if u'赞' in a.xpath('./text()').extract()[0]:
-                                weibo_item['support_number'] = re.findall('([0-9]+)', a.xpath('./text()').extract()[0])[0]
+                                weibo_item['support_number'] = re.findall('([0-9]+)',
+                                                                          a.xpath('./text()').extract()[0])[0]
                             if u'转发' in a.xpath('./text()').extract()[0]:
-                                weibo_item['transpond_number'] = re.findall('([0-9]+)', a.xpath('./text()').extract()[0])[0]
+                                weibo_item['transpond_number'] = re.findall('([0-9]+)',
+                                                                            a.xpath('./text()').extract()[0])[0]
                                 trans_href = a.xpath('./@href').extract()[0]
                             if u'评论' in a.xpath('./text()').extract()[0]:
-                                weibo_item['comment_number'] = re.findall('([0-9]+)', a.xpath('./text()').extract()[0])[0]
+                                weibo_item['comment_number'] = re.findall('([0-9]+)',
+                                                                          a.xpath('./text()').extract()[0])[0]
                                 comment_href = a.xpath('./@href').extract()[0]
                         weibo_item['date'] = divs[-1].xpath('./span[@class="ct"]/text()').extract()[0]
                         if isCorrectTime(weibo_item['date']) == TOO_FORWARD_NEWS:
@@ -146,7 +148,8 @@ class KeyWordsSpider(scrapy.Spider):
                         elif (isCorrectTime(weibo_item['date']) == TOO_LATE_NEWS) \
                                 and (u'上页' not in selector.css('div.pa')[0].extract()):
                             continue
-                        elif (isCorrectTime(weibo_item['date']) == TOO_LATE_NEWS) and (u'上页' in selector.css('div.pa')[0].extract()):
+                        elif (isCorrectTime(weibo_item['date']) == TOO_LATE_NEWS) and \
+                                (u'上页' in selector.css('div.pa')[0].extract()):
                             return
                         weibo_item['tag'] = tag
                         if KeyWordsSpider.WriteSwitch:
@@ -177,7 +180,6 @@ class KeyWordsSpider(scrapy.Spider):
                                 callback=self.parse_trans
                             )
 
-
     def parse_comment(self, response):
         if not response.body:
             return
@@ -201,7 +203,8 @@ class KeyWordsSpider(scrapy.Spider):
                 if u"查看更多热门" in observer_item['user']:
                     continue
                 try:
-                    observer_item['content'] = re.findall('<span class="ctt">(.+)</span>', comment_record.xpath('./span[@class="ctt"]').extract()[0])[0]
+                    observer_item['content'] = re.findall('<span class="ctt">(.+)</span>',
+                                                          comment_record.xpath('./span[@class="ctt"]').extract()[0])[0]
                 except Exception as e:
                     observer_item['content'] = ''
                     info = __file__ + ' line:' + str(sys._getframe().f_lineno)
@@ -232,7 +235,8 @@ class KeyWordsSpider(scrapy.Spider):
                 meta['comment_keys'] = comment_keys
                 trans_item['weibo_content'] = meta['content']
                 trans_item['weibo_date'] = meta['date']
-                trans_item['support_number'] = re.findall('([0-9]+)', c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
+                trans_item['support_number'] = re.findall('([0-9]+)',
+                                                          c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
                 trans_item['tag'] = meta['tag']
                 if KeyWordsSpider.WriteSwitch:
                     yield trans_item
@@ -258,8 +262,7 @@ class KeyWordsSpider(scrapy.Spider):
         yield FormRequest(
             url=response.meta['user_com_href'],
             method='GET',
-            formdata=
-            {
+            formdata={
                 'pids': div_id,
                 'profile_ftype': '1',
                 'is_all': '1',
@@ -287,7 +290,8 @@ class KeyWordsSpider(scrapy.Spider):
             json_body = json.loads(body)['html']
             virtual_response = scrapy.http.TextResponse(url='', body=json_body.encode())
             selector = Selector(virtual_response)
-            total = int(selector.css('div.WB_cardwrap.WB_result.S_bg1').css('span.S_txt2').xpath('./em[1]/text()').extract()[0])
+            total = int(selector.css('div.WB_cardwrap.WB_result.S_bg1').
+                        css('span.S_txt2').xpath('./em[1]/text()').extract()[0])
 
             if total > ZOBIE_FAN_CRITICAL_VALUE:
                 self.zombie_fans.append(response.meta['user_com_href'])
@@ -304,9 +308,12 @@ class KeyWordsSpider(scrapy.Spider):
                 target_divs = wbs[0].xpath('//div[@class="WB_feed_handle"]')
                 if len(target_divs) > 0:
                     target_div = target_divs[0]
-                    trans_info = target_div.xpath('./div[1]/ul[1]/li[2]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
-                    comment_info = target_div.xpath('./div[1]/ul[1]/li[3]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
-                    support_info = target_div.xpath('./div[1]/ul[1]/li[4]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    trans_info = target_div.xpath(
+                        './div[1]/ul[1]/li[2]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    comment_info = target_div.xpath(
+                        './div[1]/ul[1]/li[3]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    support_info = target_div.xpath(
+                        './div[1]/ul[1]/li[4]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
                     if u'转发' in trans_info:
                         trans_num = 0
                     else:
