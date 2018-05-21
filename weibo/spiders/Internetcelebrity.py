@@ -27,7 +27,8 @@ class ICSpider(scrapy.Spider):
             'Accept-Language': 'zh-CN,zh;q=0.8',
             'Accept-Encoding': 'gzip, deflate, sdch',
             'Connection': 'keep-alive',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.104 Safari/537.36 Core/1.53.4843.400 QQBrowser/9.7.13021.400',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/53.0.2785.104 Safari/537.36 Core/1.53.4843.400 QQBrowser/9.7.13021.400',
             'Referer': 'https://passport.weibo.cn/signin/login?entry=mweibo&r=http%3A%2F%2Fm.weibo.cn'
         }
         self.zombie_fans = []
@@ -173,7 +174,8 @@ class ICSpider(scrapy.Spider):
                         num_of_cpage = 1
                     for page_number in range(1, num_of_cpage + 1):
                         yield Request(comment_href.replace('#cmtfrm', '') + '&page=%s' % page_number,
-                                      meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag'], 'date': weibo_item['date']},
+                                      meta={'weibo': weibo_item['content'], 'tag': weibo_item['tag'],
+                                            'date': weibo_item['date']},
                                       callback=self.parse_comment)
 
                     trans_number = re.findall('([0-9]+)', weibo_item['transpond_number'])[0]
@@ -216,7 +218,8 @@ class ICSpider(scrapy.Spider):
             if u"查看更多热门" in observer_item['user']:
                 continue
             try:
-                observer_item['content'] = re.findall('<span class="ctt">(.+)</span>', comment_record.xpath('./span[@class="ctt"]').extract()[0])[0]
+                observer_item['content'] = re.findall('<span class="ctt">(.+)</span>',
+                                                      comment_record.xpath('./span[@class="ctt"]').extract()[0])[0]
             except Exception as e:
                 observer_item['content'] = ''
                 with open('error.log', 'a+') as f:
@@ -235,7 +238,8 @@ class ICSpider(scrapy.Spider):
         user_info = selector.xpath('//div[@class="u"]')[0]
         user_item['user_url'] = user_url
         user_item['tag'] = response.meta['tag']
-        user_attrs = re.findall('.*([\u4e00-\u9fa5]+/[\u4e00-\u9fa5]+).*', user_info.xpath('//span[@class="ctt"]').extract()[0])[0].split('/')
+        user_attrs = re.findall('.*([\u4e00-\u9fa5]+/[\u4e00-\u9fa5]+).*',
+                                user_info.xpath('//span[@class="ctt"]').extract()[0])[0].split('/')
         user_item['sex'] = ''
         user_item['location'] = ''
         if len(user_attrs):
@@ -271,7 +275,8 @@ class ICSpider(scrapy.Spider):
                 meta['comment_keys'] = comment_keys
                 trans_item['weibo_content'] = meta['content']
                 trans_item['weibo_date'] = meta['date']
-                trans_item['support_number'] = re.findall('([0-9]+)', c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
+                trans_item['support_number'] = re.findall('([0-9]+)',
+                                                          c.xpath('./span[@class="cc"]/a[1]/text()').extract()[0])[0]
                 trans_item['tag'] = meta['tag']
                 if ICSpider.WriteSwitch:
                     yield trans_item
@@ -305,8 +310,7 @@ class ICSpider(scrapy.Spider):
         yield FormRequest(
             url=response.meta['user_com_href'],
             method='GET',
-            formdata=
-            {
+            formdata={
                 'pids': div_id,
                 'profile_ftype': '1',
                 'is_all': '1',
@@ -334,7 +338,8 @@ class ICSpider(scrapy.Spider):
             json_body = json.loads(body)['html']
             virtual_response = scrapy.http.TextResponse(url='', body=json_body.encode())
             selector = Selector(virtual_response)
-            total = int(selector.css('div.WB_cardwrap.WB_result.S_bg1').css('span.S_txt2').xpath('./em[1]/text()').extract()[0])
+            total = int(selector.css('div.WB_cardwrap.WB_result.S_bg1').
+                        css('span.S_txt2').xpath('./em[1]/text()').extract()[0])
 
             if total > ZOBIE_FAN_CRITICAL_VALUE:
                 self.zombie_fans.append(response.meta['user_com_href'])
@@ -351,9 +356,12 @@ class ICSpider(scrapy.Spider):
                 target_divs = wbs[0].xpath('//div[@class="WB_feed_handle"]')
                 if len(target_divs) > 0:
                     target_div = target_divs[0]
-                    trans_info = target_div.xpath('./div[1]/ul[1]/li[2]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
-                    comment_info = target_div.xpath('./div[1]/ul[1]/li[3]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
-                    support_info = target_div.xpath('./div[1]/ul[1]/li[4]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    trans_info = target_div.xpath(
+                        './div[1]/ul[1]/li[2]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    comment_info = target_div.xpath(
+                        './div[1]/ul[1]/li[3]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
+                    support_info = target_div.xpath(
+                        './div[1]/ul[1]/li[4]/a[1]/span[1]/span[1]/span[1]/em[2]/text()').extract()[0]
                     if u'转发' in trans_info:
                         trans_num = 0
                     else:
