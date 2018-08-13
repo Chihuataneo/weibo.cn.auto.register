@@ -58,8 +58,8 @@ class TopicSpider(scrapy.Spider):
                 method="POST",
                 formdata={
                     # **********input your login info***********
-                    "username": "weibopachong@sina.com",
-                    "password": "weiboceshi",
+                    "username": "",
+                    "password": "",
                     # ******************************************
                     "savestate": "1",
                     "r": "http://m.weibo.cn",
